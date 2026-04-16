@@ -372,6 +372,14 @@
     
     // UI del juego
     function actualizarJuego() {
+    // Si por alguna razón las variables son nulas, las inicializamos
+    if (!deck) deck = [];
+    if (!myHand) myHand = [];
+    if (!discardPile) discardPile = [];
+    if (!otherPlayers) otherPlayers = [];
+
+    // Ahora deck.length nunca fallará
+    playersRow.innerHTML = "";
         // Oponentes
         playersRow.innerHTML = "";
         for(let p of otherPlayers) {
@@ -562,18 +570,21 @@
     };
     
     function iniciarJuego(estado) {
-        myHand = estado.hands[myId] || [];
-        deck = estado.deck;
-        discardPile = estado.discardPile;
+        // Carga inicial
+        myHand = (estado.hands && estado.hands[myId]) ? estado.hands[myId] : [];
+        deck = estado.deck || [];
+        discardPile = estado.discardPile || [];
         currentTurn = estado.currentTurn;
-        myPoints = estado.points[myId] || 0;
+        myPoints = (estado.points && estado.points[myId]) ? estado.points[myId] : 0;
+        
         rondaEnCurso = estado.rondaEnCurso;
         hasDrawn = estado.hasDrawn || false;
         gameActive = true;
         selectedCard = null;
         
+        // Actualizar oponentes
         otherPlayers = players.filter(p => p.id !== myId).map(p => ({
-            id: p.id, name: p.name, points: estado.points[p.id] || 0
+            id: p.id, name: p.name, points: (estado.points && estado.points[p.id]) || 0
         }));
         
         startScreen.classList.add("hidden");
@@ -581,19 +592,31 @@
         gameScreen.classList.remove("hidden");
         actualizarJuego();
         
+        // Listener en tiempo real
         gameRef.child("gameState").on("value", (snap) => {
             let nuevo = snap.val();
             if(nuevo) {
-                deck = nuevo.deck;
-                discardPile = nuevo.discardPile;
+                deck = nuevo.deck || [];
+                discardPile = nuevo.discardPile || [];
                 currentTurn = nuevo.currentTurn;
                 rondaEnCurso = nuevo.rondaEnCurso;
                 hasDrawn = nuevo.hasDrawn || false;
+                
                 if(nuevo.hands && nuevo.hands[myId]) myHand = nuevo.hands[myId];
-                if(nuevo.points) myPoints = nuevo.points[myId] || 0;
+                if(nuevo.points) {
+                    myPoints = nuevo.points[myId] || 0;
+                    // Actualizar puntos de los demás también
+                    otherPlayers.forEach(op => {
+                        if(nuevo.points[op.id] !== undefined) op.points = nuevo.points[op.id];
+                    });
+                }
+
                 if(nuevo.winner) {
-                    addLog(`🏆 ${players.find(p=>p.id===nuevo.winner)?.name || "Alguien"} cerró la ronda!`);
-                    setTimeout(() => { if(isHost) gameRef.update({ gameState: null, status: "waiting" }); }, 3000);
+                    let ganador = players.find(p => p.id === nuevo.winner);
+                    addLog(`🏆 ${ganador ? ganador.name : "Alguien"} cerró la ronda!`);
+                    setTimeout(() => { 
+                        if(isHost) gameRef.update({ gameState: null, status: "waiting" }); 
+                    }, 3000);
                 }
                 actualizarJuego();
             }
