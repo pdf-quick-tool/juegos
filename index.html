@@ -571,12 +571,16 @@ function cerrar() {
     }
 }
 
-// --- ASIGNACIÓN DE EVENTOS ---
-// Usamos el operador ?. o un if para evitar errores si el elemento no está en el DOM
-document.getElementById("abandonBtn").onclick = abandonarPartida;
-const quitBtn = document.getElementById("quitGameBtn");
-if (quitBtn) quitBtn.onclick = abandonarPartida;
-document.getElementById("closeBtn").onclick = cerrar;
+// --- ASIGNACIÓN DE EVENTOS SEGURA (USÁ SOLO ESTA) ---
+const btnAbandonar = document.getElementById("abandonBtn");
+if (btnAbandonar) btnAbandonar.onclick = abandonarPartida;
+
+const btnSalir = document.getElementById("quitGameBtn");
+if (btnSalir) btnSalir.onclick = abandonarPartida;
+
+const btnCerrar = document.getElementById("closeBtn");
+if (btnCerrar) btnCerrar.onclick = cerrar;
+
 
 // ========== SALAS ==========
 document.getElementById("createBtn").onclick = () => {
