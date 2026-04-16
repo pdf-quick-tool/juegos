@@ -775,7 +775,6 @@ function iniciarJuego(estado) {
     });
 }
 
-    document.getElementById("backBtn").onclick = () => window.location.reload();
     document.getElementById("mazoBtn").onclick = () => {
         if(currentTurn === myId && gameActive && rondaEnCurso) {
             if(!hasDrawn) robarMazo();
