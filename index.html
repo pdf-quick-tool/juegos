@@ -333,53 +333,32 @@ function dorso() {
         return pts;
     }
     
-    function puedeCerrar(mano) {
-        if(mano.length === 0) return true;
-        let usado = new Array(mano.length).fill(false);
-        let comodines = mano.map((c,i)=>c.comodin?i:-1).filter(i=>i!==-1);
-        let normales = mano.map((c,i)=>c.comodin?null:{idx:i,palo:c.palo,num:c.numero}).filter(c=>c);
-        let usadosComodin = 0;
+function puedeCerrar(mano) {
+    // Si todavía no robaste (tenés 7 cartas), no podés cerrar la ronda
+    if (mano.length < 8) return false;
+
+    // Traemos el límite que eligió el Host en el lobby (por defecto 5)
+    let limiteCierre = parseInt(document.getElementById("tipoCierre")?.value) || 5;
+    let minimoPuntosPosibles = 999;
+
+    // PROBAMOS CADA CARTA COMO DESCARTE DE CIERRE
+    // (Simulamos tirar una carta y evaluamos las 7 que quedan)
+    for (let i = 0; i < mano.length; i++) {
+        let manoParaEvaluar = [...mano];
+        manoParaEvaluar.splice(i, 1); // Quitamos la carta 'i'
         
-        function buscarGrupo() {
-            for(let i=0; i<normales.length; i++) {
-                if(usado[normales[i].idx]) continue;
-                let grupo = [normales[i].idx];
-                for(let j=i+1; j<normales.length; j++) {
-                    if(!usado[normales[j].idx] && normales[j].num === normales[i].num && mano[normales[j].idx].palo !== mano[normales[i].idx].palo) {
-                        if(grupo.length < 4 && !grupo.some(idx=>mano[idx].palo===mano[normales[j].idx].palo)) grupo.push(normales[j].idx);
-                    }
-                }
-                if(grupo.length >= 3) { grupo.forEach(idx=>usado[idx]=true); return true; }
-                if(grupo.length === 2 && usadosComodin < comodines.length) { grupo.forEach(idx=>usado[idx]=true); usado[comodines[usadosComodin++]] = true; return true; }
-            }
-            return false;
+        // Usamos tu función puntosSueltas para ver cuánto suman las 7 restantes
+        let pts = puntosSueltas(manoParaEvaluar);
+        
+        if (pts < minimoPuntosPosibles) {
+            minimoPuntosPosibles = pts;
         }
-        
-        function buscarEscalera() {
-            for(let palo of PALOS) {
-                let cartasPalo = [];
-                for(let idx=0; idx<normales.length; idx++) if(!usado[normales[idx].idx] && mano[normales[idx].idx].palo === palo) cartasPalo.push({idx:normales[idx].idx, num:normales[idx].num});
-                cartasPalo.sort((a,b)=>a.num-b.num);
-                let temp = [], mejor = [];
-                for(let i=0; i<cartasPalo.length; i++) {
-                    if(temp.length===0 || cartasPalo[i].num === temp[temp.length-1].num+1) temp.push(cartasPalo[i]);
-                    else { if(temp.length>=3) mejor.push(...temp); temp = [cartasPalo[i]]; }
-                }
-                if(temp.length>=3) mejor.push(...temp);
-                if(mejor.length>=3) { for(let item of mejor) usado[item.idx]=true; return true; }
-                if(mejor.length === 2 && usadosComodin < comodines.length) { for(let item of mejor) usado[item.idx]=true; usado[comodines[usadosComodin++]] = true; return true; }
-            }
-            return false;
-        }
-        
-        let cambio = true;
-        while(cambio) { cambio = buscarGrupo() || buscarEscalera(); }
-        let sueltas = 0, idxSuelta = -1;
-        for(let i=0; i<mano.length; i++) if(!usado[i]) { sueltas++; idxSuelta = i; }
-        if(sueltas === 0) return true;
-        if(sueltas === 1 && valorCarta(mano[idxSuelta]) <= 4) return true;
-        return false;
     }
+
+    // Si encontramos al menos una forma de que las 7 cartas sumen 
+    // lo mismo o menos que el límite, el botón se habilita
+    return minimoPuntosPosibles <= limiteCierre;
+}
 
     // ============================================================
     // 🔥 MULTIJUGADOR Y PERSISTENCIA
@@ -524,17 +503,34 @@ function robarDescarte() {
     
     gameRef.update(actualizaciones);
 }
+function obtenerSiguienteVivo(actualId) {
+    let idx = players.findIndex(p => p.id === actualId);
+    let total = players.length;
+    
+    for (let i = 1; i <= total; i++) {
+        let siguiente = players[(idx + i) % total];
+        // Si no existe gameConfig o maxPts, usamos 100 por defecto
+        let limite = (typeof gameConfig !== 'undefined' && gameConfig.maxPts) ? gameConfig.maxPts : 100;
+        
+        // El turno pasa solo si el jugador tiene menos del puntaje límite
+        if ((siguiente.points || 0) < limite) {
+            return siguiente.id;
+        }
+    }
+    return actualId; 
+}
 function descartar() {
     if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCard === null) return;
+    
     playSfx('carta');
-    let nombreYo = isHost ? "Anfitrión" : "Jugador"; // O usá el nombre real si lo tenés
-    addLog(`🎴 ${nombreYo} descartó`); // Esto lo ves vos
+    let nombreYo = myName || (isHost ? "Anfitrión" : "Jugador"); 
+    addLog(`🎴 ${nombreYo} descartó`);
+
     let carta = myHand.splice(selectedCard, 1)[0];
     discardPile.push(carta);
     
-    // IMPORTANTE: Asegurate que 'players' sea la lista completa que viene de la sala
-    let idx = players.findIndex(p => p.id === myId);
-    let next = players[(idx + 1) % players.length].id;
+    // USAMOS LA NUEVA LÓGICA AQUÍ:
+    let next = obtenerSiguienteVivo(myId);
 
     let actualizaciones = {};
     actualizaciones[`gameState/hands/${myId}`] = myHand;
@@ -544,10 +540,11 @@ function descartar() {
     
     selectedCard = null;
     hasDrawn = false;
-    addLog("Descartaste");
     
     gameRef.update(actualizaciones);
+    actualizarJuego();
 }
+
 function abandonarPartida() {
     if (confirm("¿Estás seguro de que querés salir de la partida?")) {
         localStorage.removeItem("chinchon_roomId");
@@ -556,20 +553,60 @@ function abandonarPartida() {
     }
 }
 
+// 1. Primero definí esta función de apoyo (fuera de cerrar)
+function calcularMejorPuntaje(mano) {
+    let min = 999;
+    for (let i = 0; i < mano.length; i++) {
+        let t = [...mano]; 
+        t.splice(i, 1);
+        let p = puntosSueltas(t);
+        if (p < min) min = p;
+    }
+    return min;
+}
+
+// 2. Ahora la función cerrar corregida
 function cerrar() {
     if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn) return;
     
     if(puedeCerrar(myHand)) {
         addLog("✨ ¡Cerraste la ronda! ✨");
+        
+        let nuevosPuntos = {};
+        // Calculamos el puntaje del que cierra (el mejor posible descartando 1 de las 8)
+        let miPuntajeRonda = calcularMejorPuntaje(myHand);
+        
+        // 1. Calculamos puntos para todos los jugadores
+        players.forEach(p => {
+            let ptsActuales = p.points || 0;
+            let ptsRonda = 0;
+
+            if (p.id === myId) {
+                ptsRonda = miPuntajeRonda; // Suma lo que le quedó suelto al cerrar
+            } else {
+                // Buscamos la mano de los oponentes que está en Firebase
+                // (Ojo: asegurate que players[i].mano se esté actualizando)
+                let suMano = (otherPlayers.find(op => op.id === p.id)?.mano || []);
+                ptsRonda = puntosSueltas(suMano); 
+            }
+            
+            nuevosPuntos[p.id] = ptsActuales + ptsRonda;
+        });
+
+        // 2. Actualizamos Firebase
         let actualizaciones = {};
         actualizaciones[`gameState/hands/${myId}`] = myHand;
         actualizaciones[`gameState/rondaEnCurso`] = false;
         actualizaciones[`gameState/winner`] = myId;
+        actualizaciones[`gameState/points`] = nuevosPuntos;
+        
         gameRef.update(actualizaciones);
     } else {
         addLog("❌ No puedes cerrar");
     }
 }
+
+
 
 // --- ASIGNACIÓN DE EVENTOS SEGURA (USÁ SOLO ESTA) ---
 const btnAbandonar = document.getElementById("abandonBtn");
