@@ -444,24 +444,40 @@ function robarMazo() {
     myHand.push(carta);
     hasDrawn = true;
     
-    // USAR RUTA ESPECÍFICA PARA NO BORRAR A OTROS
     let actualizaciones = {};
+    // Quitamos "gameState/" de la llave porque ya vamos a actualizar sobre el nodo de la partida
     actualizaciones[`gameState/hands/${myId}`] = myHand;
     actualizaciones[`gameState/deck`] = deck;
     actualizaciones[`gameState/hasDrawn`] = true;
+    
+    gameRef.update(actualizaciones);
+    // No hace falta llamar a actualizarJuego() acá porque el listener .on("value") lo hará por vos
+}
+function robarDescarte() {
+    if(!gameActive || !rondaEnCurso || currentTurn !== myId || hasDrawn || discardPile.length === 0) return;
+    
+    let carta = discardPile.pop();
+    myHand.push(carta);
+    hasDrawn = true;
+    addLog("Robaste del descarte");
+
+    let actualizaciones = {};
+    actualizaciones[`gameState/hands/${myId}`] = myHand;
+    actualizaciones[`gameState/discardPile`] = discardPile;
+    actualizaciones[`gameState/hasDrawn`] = true;
+    
     gameRef.update(actualizaciones);
 }
-    
 function descartar() {
     if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCard === null) return;
+    
     let carta = myHand.splice(selectedCard, 1)[0];
     discardPile.push(carta);
     
-    let all = [...otherPlayers, { id: myId }];
-    let idx = all.findIndex(p => p.id === currentTurn);
-    let next = all[(idx + 1) % all.length].id;
+    // IMPORTANTE: Asegurate que 'players' sea la lista completa que viene de la sala
+    let idx = players.findIndex(p => p.id === myId);
+    let next = players[(idx + 1) % players.length].id;
 
-    // USAR RUTA ESPECÍFICA
     let actualizaciones = {};
     actualizaciones[`gameState/hands/${myId}`] = myHand;
     actualizaciones[`gameState/discardPile`] = discardPile;
@@ -470,54 +486,27 @@ function descartar() {
     
     selectedCard = null;
     hasDrawn = false;
+    addLog("Descartaste");
+    
     gameRef.update(actualizaciones);
 }
-    
-function descartar() {
-    if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCard === null) return;
-    
-    let carta = myHand.splice(selectedCard, 1)[0];
-    discardPile.push(carta);
-    
-    let all = players; // Usamos la lista global de jugadores
-    let idx = all.findIndex(p => p.id === myId);
-    let next = all[(idx + 1) % all.length].id;
-
-    // Actualizamos por separado para no sobreescribir todo el objeto hands
-    gameRef.child("gameState/hands/" + myId).set(myHand);
-    gameRef.child("gameState").update({ 
-        discardPile: discardPile, 
-        currentTurn: next, 
-        hasDrawn: false 
-    });
-
-    selectedCard = null;
-    hasDrawn = false;
-    addLog("Descartaste");
-    actualizarJuego();
-}
-
 function cerrar() {
     if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn) return;
     
     if(puedeCerrar(myHand)) {
         addLog("✨ ¡Cerraste la ronda! ✨");
         
-        // Es mejor actualizar la mano final antes de cerrar 
-        // por si hubo un cambio de último segundo
-        let actualizaciones = {
-            rondaEnCurso: false,
-            winner: myId
-        };
+        let actualizaciones = {};
+        actualizaciones[`gameState/hands/${myId}`] = myHand;
+        actualizaciones[`gameState/rondaEnCurso`] = false;
+        actualizaciones[`gameState/winner`] = myId;
         
-        // Guardamos tu mano ganadora y cerramos la ronda
-        gameRef.child("gameState/hands/" + myId).set(myHand);
-        gameRef.child("gameState").update(actualizaciones);
-        
+        gameRef.update(actualizaciones);
     } else {
-        addLog("❌ No puedes cerrar (necesitas menos de 5 pts)");
+        addLog("❌ No puedes cerrar");
     }
 }
+
 
     // ========== SALAS ==========
     document.getElementById("createBtn").onclick = () => {
