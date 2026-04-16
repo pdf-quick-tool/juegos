@@ -205,6 +205,18 @@
     
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+// --- AUDIO ---
+const sfx = {
+    turno: new Audio('sounds/turno.mp3'),
+    ganar: new Audio('sounds/ganar.mp3'),
+    perder: new Audio('sounds/perder.mp3'),
+    carta: new Audio('sounds/carta.mp3')
+};
+
+function playSfx(nombre) {
+    sfx[nombre].currentTime = 0;
+    sfx[nombre].play().catch(() => {}); // El catch evita errores si el navegador bloquea el audio
+}
 
     // ============================================================
     // 🃏 IMAGEN DE LA BARAJA
@@ -440,6 +452,7 @@ function dorso() {
     
 function robarMazo() {
     if(!gameActive || !rondaEnCurso || currentTurn !== myId || hasDrawn || deck.length === 0) return;
+    playSfx('carta');
     let carta = deck.pop();
     myHand.push(carta);
     hasDrawn = true;
@@ -470,6 +483,7 @@ function robarDescarte() {
 }
 function descartar() {
     if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCard === null) return;
+    playSfx('carta');
     
     let carta = myHand.splice(selectedCard, 1)[0];
     discardPile.push(carta);
@@ -609,61 +623,75 @@ function cerrar() {
         }
     };
     
-    function iniciarJuego(estado) {
-        // Carga inicial
-        myHand = (estado.hands && estado.hands[myId]) ? estado.hands[myId] : [];
-        deck = estado.deck || [];
-        discardPile = estado.discardPile || [];
-        currentTurn = estado.currentTurn;
-        myPoints = (estado.points && estado.points[myId]) ? estado.points[myId] : 0;
-        
-        rondaEnCurso = estado.rondaEnCurso;
-        hasDrawn = estado.hasDrawn || false;
-        gameActive = true;
-        selectedCard = null;
-        
-        // Actualizar oponentes
-        otherPlayers = players.filter(p => p.id !== myId).map(p => ({
-            id: p.id, name: p.name, points: (estado.points && estado.points[p.id]) || 0
-        }));
-        
-        startScreen.classList.add("hidden");
-        lobbyScreen.classList.add("hidden");
-        gameScreen.classList.remove("hidden");
-        actualizarJuego();
-        
-        // Listener en tiempo real
-        gameRef.child("gameState").on("value", (snap) => {
-            let nuevo = snap.val();
-            if(nuevo) {
-                deck = nuevo.deck || [];
-                discardPile = nuevo.discardPile || [];
-                currentTurn = nuevo.currentTurn;
-                rondaEnCurso = nuevo.rondaEnCurso;
-                hasDrawn = nuevo.hasDrawn || false;
-                if(nuevo.hands && nuevo.hands[myId]) {
-                    myHand = Object.values(nuevo.hands[myId]); // Esto garantiza que sea iterable
-                }
-                if(nuevo.points) {
-                    myPoints = nuevo.points[myId] || 0;
-                    // Actualizar puntos de los demás también
-                    otherPlayers.forEach(op => {
-                        if(nuevo.points[op.id] !== undefined) op.points = nuevo.points[op.id];
-                    });
-                }
-
-                if(nuevo.winner) {
-                    let ganador = players.find(p => p.id === nuevo.winner);
-                    addLog(`🏆 ${ganador ? ganador.name : "Alguien"} cerró la ronda!`);
-                    setTimeout(() => { 
-                        if(isHost) gameRef.update({ gameState: null, status: "waiting" }); 
-                    }, 3000);
-                }
-                actualizarJuego();
-            }
-        });
-    }
+function iniciarJuego(estado) {
+    // Carga inicial
+    myHand = (estado.hands && estado.hands[myId]) ? estado.hands[myId] : [];
+    deck = estado.deck || [];
+    discardPile = estado.discardPile || [];
+    currentTurn = estado.currentTurn;
+    myPoints = (estado.points && estado.points[myId]) ? estado.points[myId] : 0;
     
+    rondaEnCurso = estado.rondaEnCurso;
+    hasDrawn = estado.hasDrawn || false;
+    gameActive = true;
+    selectedCard = null;
+    
+    // Actualizar oponentes
+    otherPlayers = players.filter(p => p.id !== myId).map(p => ({
+        id: p.id, name: p.name, points: (estado.points && estado.points[p.id]) || 0
+    }));
+    
+    startScreen.classList.add("hidden");
+    lobbyScreen.classList.add("hidden");
+    gameScreen.classList.remove("hidden");
+    actualizarJuego();
+    
+    // Listener en tiempo real
+    gameRef.child("gameState").on("value", (snap) => {
+        let nuevo = snap.val();
+        if(nuevo) {
+            // 1. Sonido de turno (comparar antes de actualizar currentTurn global)
+            if (nuevo.currentTurn === myId && currentTurn !== myId) {
+                playSfx('turno');
+            }
+
+            // 2. Actualizar variables globales
+            deck = nuevo.deck || [];
+            discardPile = nuevo.discardPile || [];
+            let anteriorRonda = rondaEnCurso; // Para detectar el cierre
+            rondaEnCurso = nuevo.rondaEnCurso;
+            currentTurn = nuevo.currentTurn;
+            hasDrawn = nuevo.hasDrawn || false;
+
+            if(nuevo.hands && nuevo.hands[myId]) {
+                myHand = Array.isArray(nuevo.hands[myId]) ? nuevo.hands[myId] : Object.values(nuevo.hands[myId]);
+            }
+
+            if(nuevo.points) {
+                myPoints = nuevo.points[myId] || 0;
+                otherPlayers.forEach(op => {
+                    if(nuevo.points[op.id] !== undefined) op.points = nuevo.points[op.id];
+                });
+            }
+
+            // 3. Lógica de Ganador y Sonidos de fin de ronda
+            if(nuevo.winner && anteriorRonda === true && rondaEnCurso === false) {
+                if(nuevo.winner === myId) playSfx('ganar');
+                else playSfx('perder');
+                
+                let ganador = players.find(p => p.id === nuevo.winner);
+                addLog(`🏆 ${ganador ? ganador.name : "Alguien"} cerró la ronda!`);
+                
+                setTimeout(() => { 
+                    if(isHost) gameRef.update({ gameState: null, status: "waiting" }); 
+                }, 3000);
+            }
+
+            actualizarJuego();
+        }
+    });
+}
+
     document.getElementById("backBtn").onclick = () => window.location.reload();
     document.getElementById("mazoBtn").onclick = () => {
         if(currentTurn === myId && gameActive && rondaEnCurso) {
