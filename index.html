@@ -547,12 +547,18 @@ function descartar() {
 
 
 function abandonarPartida() {
-    if (confirm("¿Estás seguro de que querés salir de la partida?")) {
+    if (confirm("¿Estás seguro de que querés salir?")) {
+        // Si soy el Host, borro la partida de Firebase para que no quede basura
+        if (isHost && gameRef) {
+            gameRef.remove(); 
+        }
+        
         localStorage.removeItem("chinchon_roomId");
         localStorage.removeItem("esAnfitrion");
         window.location.reload();
     }
 }
+
 
 // 1. Primero definí esta función de apoyo (fuera de cerrar)
 function calcularMejorPuntaje(mano) {
@@ -638,7 +644,7 @@ document.getElementById("createBtn").onclick = () => {
         
         gameRef = db.ref("games/" + roomId);
         gameRef.set({ hostId: myId, players: players, status: "waiting", createdAt: Date.now() });
-        
+        gameRef.onDisconnect().remove(); 
         gameRef.on("value", (snap) => {
             let data = snap.val();
             if(data) {
@@ -698,18 +704,24 @@ document.getElementById("createBtn").onclick = () => {
     };
     
     function actualizarSala() {
-        playersList.innerHTML = players.map(p => `<li>${p.name} ${p.id === myId ? "(tú)" : ""}</li>`).join("");
-        if(isHost && players.length >= 2) {
-            startGameBtn.disabled = false;
-            startGameBtn.style.opacity = "1";
-            lobbyStatus.innerHTML = "✅ Listo! Empezar";
-            lobbyStatus.className = "status status-ok";
-        } else if(isHost) {
-            startGameBtn.disabled = true;
-            startGameBtn.style.opacity = "0.5";
-            lobbyStatus.innerHTML = "⏳ Esperando jugadores (mínimo 2)";
-            lobbyStatus.className = "status status-wait";
+        if (roomId) {
+            document.getElementById("codeDisplay").innerText = roomId;
         }
+    playersList.innerHTML = players.map(p => 
+        `<li>${p.name} ${p.id === myId ? "(tú)" : ""}: <b>${p.points || 0} pts</b></li>`
+    ).join("");
+
+    if(isHost && players.length >= 2) {
+        startGameBtn.disabled = false;
+        startGameBtn.style.opacity = "1";
+        lobbyStatus.innerHTML = "✅ Listo! Empezar";
+        lobbyStatus.className = "status status-ok";
+    } else if(isHost) {
+        startGameBtn.disabled = true;
+        startGameBtn.style.opacity = "0.5";
+        lobbyStatus.innerHTML = "⏳ Esperando jugadores (mínimo 2)";
+        lobbyStatus.className = "status status-wait";
+    }
     }
     
     function mostrarLobby(host) {
@@ -724,28 +736,40 @@ document.getElementById("createBtn").onclick = () => {
         }
     }
     
-    startGameBtn.onclick = () => {
-        if(isHost && players.length >= 2) {
-            let baraja = mezclar(crearBaraja());
-            let mazo = [...baraja];
-            let desc = [mazo.pop()];
-            let manos = {};
-            players.forEach(p => {
-                manos[p.id] = mazo.splice(0, 7); // Repartir 7 a cada uno
-            });
-            let estado = {
-                deck: mazo,
-                discardPile: desc,
-                hands: manos,
-                currentTurn: players[0].id,
-                points: Object.fromEntries(players.map(p => [p.id, 0])),
-                rondaEnCurso: true,
-                hasDrawn: false
-            };
-            gameRef.update({ status: "playing", gameState: estado });
-            iniciarJuego(estado);
-        }
-    };
+startGameBtn.onclick = () => {
+    if(isHost && players.length >= 2) {
+        let baraja = mezclar(crearBaraja());
+        let mazo = [...baraja];
+        let desc = [mazo.pop()];
+        let manos = {};
+        
+        // Creamos un objeto de puntos basado en los puntos que YA TIENEN los jugadores
+        let puntosParaLaRonda = {};
+        players.forEach(p => {
+            puntosParaLaRonda[p.id] = p.points || 0;
+            
+            // Repartimos 7 cartas
+            let mano = [];
+            for(let i=0; i<7; i++) mano.push(mazo.pop());
+            manos[p.id] = mano;
+        });
+
+        let estado = {
+            deck: mazo,
+            discardPile: desc,
+            hands: manos,
+            currentTurn: players[0].id,
+            points: puntosParaLaRonda, // <--- ACÁ MANTENEMOS LOS PUNTOS
+            rondaEnCurso: true,
+            hasDrawn: false
+        };
+        
+        // Limpiamos acciones viejas y empezamos
+        gameRef.update({ status: "playing", gameState: estado });
+        iniciarJuego(estado);
+    }
+};
+
     
 function iniciarJuego(estado) {
     // 1. Carga inicial de variables
