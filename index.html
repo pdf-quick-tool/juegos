@@ -148,7 +148,6 @@
 <div class="container">
     <!-- Pantalla inicio -->
     <div id="startScreen" class="screen">
-        <!-- Buscá el id="startScreen" y agregá esto -->
         <input type="text" id="playerNameInput" placeholder="Tu Nombre" maxlength="12" style="text-align: center; margin-bottom: 10px;">
         <h1>🎴 Chinchón Online</h1>
         <button class="btn-green" id="createBtn">🏠 Crear Partida</button>
@@ -158,36 +157,44 @@
         <div class="status status-wait" id="statusMsg">Conectando a Firebase...</div>
     </div>
 
-    <!-- Pantalla sala -->
+    <!-- Pantalla sala (Lobby) -->
     <div id="lobbyScreen" class="screen hidden">
         <h1>Sala</h1>
         <div class="code-box" id="codeDisplay">----</div>
         <ul class="players-list" id="playersList"></ul>
         <button class="btn-green" id="startGameBtn">🎮 Empezar</button>
-        <button id="backBtn">⬅️ Salir</button>
+        <button id="abandonBtn" style="background: #f44336; color: white; width: 100%;">🚪 Abandonar Sala</button>
         <div class="status status-wait" id="lobbyStatus">Esperando jugadores...</div>
     </div>
 
     <!-- Pantalla juego -->
     <div id="gameScreen" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div class="turno" id="turnText" style="position: static; margin: 0;">Conectando...</div>
+            <button id="quitGameBtn" style="background: #f44336; color: white; padding: 8px 15px; font-size: 0.8rem; border-radius: 20px; border: none; font-weight: bold;">Salir</button>
+        </div>
+        
         <div class="players-row" id="playersRow"></div>
+        
         <div class="center-area">
             <div class="pile" id="mazoBtn">
                 <div class="card-pile" id="deckPile"></div>
-                <div id="deckCount" style="color:white;">0</div>
+                <div id="deckCount" style="color:white; text-align: center;">0</div>
             </div>
             <div class="pile" id="descarteBtn">
                 <div class="card-pile" id="discardPile"></div>
             </div>
         </div>
+        
         <div class="my-hand" id="myHand"></div>
+        
         <div class="game-buttons">
             <button id="closeBtn">✂️ Cerrar</button>
         </div>
         <div class="log" id="log"></div>
     </div>
-    <div class="turno" id="turnText">Conectando...</div>
 </div>
+
 
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -541,32 +548,45 @@ function descartar() {
     
     gameRef.update(actualizaciones);
 }
+function abandonarPartida() {
+    if (confirm("¿Estás seguro de que querés salir de la partida?")) {
+        localStorage.removeItem("chinchon_roomId");
+        localStorage.removeItem("esAnfitrion");
+        window.location.reload();
+    }
+}
+
 function cerrar() {
     if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn) return;
     
     if(puedeCerrar(myHand)) {
         addLog("✨ ¡Cerraste la ronda! ✨");
-        
         let actualizaciones = {};
         actualizaciones[`gameState/hands/${myId}`] = myHand;
         actualizaciones[`gameState/rondaEnCurso`] = false;
         actualizaciones[`gameState/winner`] = myId;
-        
         gameRef.update(actualizaciones);
     } else {
         addLog("❌ No puedes cerrar");
     }
 }
 
+// --- ASIGNACIÓN DE EVENTOS ---
+// Usamos el operador ?. o un if para evitar errores si el elemento no está en el DOM
+document.getElementById("abandonBtn").onclick = abandonarPartida;
+const quitBtn = document.getElementById("quitGameBtn");
+if (quitBtn) quitBtn.onclick = abandonarPartida;
+document.getElementById("closeBtn").onclick = cerrar;
 
-    // ========== SALAS ==========
-    document.getElementById("createBtn").onclick = () => {
+// ========== SALAS ==========
+document.getElementById("createBtn").onclick = () => {
         let inputNombre = document.getElementById("playerNameInput").value.trim();
         if (!inputNombre) { alert("¡Poné tu nombre!"); return; }
         myName = inputNombre;
         localStorage.setItem("chinchon_myName", myName); // Lo guardamos para la próxima vez
         roomId = generarCodigo();
         isHost = true;
+        localStorage.setItem("esAnfitrion", "true"); // Guardamos que es el jefe
         players = [{ id: myId, name: myName, points: 0 }];
         codeDisplay.innerText = roomId;
         actualizarSala();
@@ -601,21 +621,35 @@ function cerrar() {
         gameRef.once("value", (snap) => {
             let data = snap.val();
             if(!data) { alert("Sala no encontrada"); return; }
-            if(data.status === "playing") { alert("Partida ya comenzó"); return; }
-            let newPlayers = [...(data.players || []), { id: myId, name: myName, points: 0 }];
-            gameRef.update({ players: newPlayers });
-            
-            gameRef.on("value", (snap) => {
-                let newData = snap.val();
-                if(newData) {
-                    players = newData.players || [];
-                    actualizarSala();
-                    if(newData.status === "playing" && newData.gameState) iniciarJuego(newData.gameState);
-                }
-            });
-            mostrarLobby(false);
-            localStorage.setItem("chinchon_roomId", roomId);
-        });
+    
+    // Verificamos si ya éramos parte de esta partida
+    let yaEstabaEnLaPartida = data.players && data.players.some(p => p.id === myId);
+
+    // Si la partida comenzó y NO somos uno de los jugadores, entonces bloqueamos
+    if(data.status === "playing" && !yaEstabaEnLaPartida) { 
+        alert("Partida ya comenzó y no eres parte de ella."); 
+        return; 
+    }
+    
+    // Si no estábamos, nos agregamos (solo si la partida no empezó)
+    if(!yaEstabaEnLaPartida) {
+        let newPlayers = [...(data.players || []), { id: myId, name: myName, points: 0 }];
+        gameRef.update({ players: newPlayers });
+    }
+    
+    // El resto del código (.on("value") y mostrarLobby) sigue igual...
+    gameRef.on("value", (snap) => {
+        let newData = snap.val();
+        if(newData) {
+            players = newData.players || [];
+            actualizarSala();
+            if(newData.status === "playing" && newData.gameState) iniciarJuego(newData.gameState);
+        }
+    });
+    mostrarLobby(false);
+    localStorage.setItem("chinchon_roomId", roomId);
+});
+
     };
     
     function actualizarSala() {
@@ -757,21 +791,20 @@ function iniciarJuego(estado) {
     img.onload = () => { SPRITE_URL = IMAGE_FILE; statusMsg.innerHTML = "✅ Listo!"; };
     img.onerror = () => { statusMsg.innerHTML = "⚠️ Imagen no encontrada"; };
     img.src = IMAGE_FILE;
-    window.addEventListener('load', () => {
-    // 1. Poner el nombre guardado en el input automáticamente
-    if (myName) {
-        document.getElementById("playerNameInput").value = myName;
-    }
+window.addEventListener('load', () => {
+    if (myName) document.getElementById("playerNameInput").value = myName;
 
-    // 2. Intentar reconectar si se refrescó la página
     let lastRoom = localStorage.getItem("chinchon_roomId");
     if (lastRoom) {
-        console.log("Detectada sala anterior: " + lastRoom);
-        // Opcional: Podrías poner un botón de "Volver a la partida"
-        // o simplemente llenar el campo del código automáticamente:
         document.getElementById("roomCode").value = lastRoom;
+        // Recuperamos si era host
+        isHost = localStorage.getItem("esAnfitrion") === "true";
+        
+        statusMsg.innerHTML = `⚠️ Partida detectada. Dale a 'Unirse' para volver.`;
     }
 });
+
+
 
 </script>
 </body>
