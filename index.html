@@ -2,9 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Chinchón Online - Multijugador</title>
     <style>
+        /* ===== TODO EL CSS QUE YA TENÍAS ===== */
         * {
             user-select: none;
             -webkit-tap-highlight-color: transparent;
@@ -13,64 +14,259 @@
 
         body {
             background: linear-gradient(145deg, #1a472a 0%, #0e2a1a 100%);
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             min-height: 100vh;
-            padding: 16px;
             margin: 0;
+            padding: 20px;
         }
 
-        .container {
-            max-width: 550px;
-            margin: 0 auto;
+        .game-container {
+            max-width: 1300px;
+            width: 100%;
+            background: #2b6e3c;
+            background-image: radial-gradient(circle at 25% 40%, rgba(60, 110, 40, 0.6) 2%, transparent 2.5%);
+            background-size: 40px 40px;
+            border-radius: 60px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.5);
+            padding: 20px;
+        }
+
+        .rules-panel {
+            background: #fef7e0;
+            border-radius: 48px;
+            margin-bottom: 20px;
+            padding: 0 20px;
+        }
+        .rules-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 12px 8px;
+            font-weight: bold;
+            font-size: 1.3rem;
+            color: #3b2a1f;
+        }
+        .rules-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+            background: #fff2da;
+            border-radius: 32px;
+            font-size: 0.9rem;
+        }
+        .rules-content.open {
+            max-height: 500px;
+            padding: 12px 20px;
+            margin-bottom: 18px;
+        }
+        .rules-content ul { margin: 8px 0; padding-left: 24px; }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); box-shadow: 0 0 15px gold; }
+            100% { transform: scale(1); }
+        }
+        .pulse-animation { animation: heartbeat 0.6s ease-in-out; }
+        .mano-pulse { animation: heartbeat 0.5s ease-in-out; }
+
+        /* === OTRAS ZONAS (SIN DORSOS DE OPONENTES) === */
+        .opponents-area {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .opponent-card {
+            background: rgba(0,0,0,0.4);
+            border-radius: 32px;
+            padding: 12px;
+            width: 150px;
+            text-align: center;
+            transition: 0.2s;
+        }
+        .opponent-card.active-turn {
+            background: rgba(255,215,0,0.3);
+            border: 2px solid #ffd966;
+        }
+        .opponent-name {
+            font-weight: bold;
+            color: #ffefb0;
+        }
+        .opponent-points {
+            color: #ffaa44;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .center-area {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 50px;
+        }
+        .pile {
+            text-align: center;
+            cursor: pointer;
+            border-radius: 20px;
+            padding: 10px;
+        }
+        .pile:active { transform: scale(0.97); }
+        .pile-label {
+            color: #ffefb0;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .card-pile {
+            width: 104px;
+            height: 159px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+        .card-count {
+            color: white;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .player-area {
+            background: rgba(0,0,0,0.35);
+            border-radius: 48px;
+            padding: 20px;
+            margin-top: 10px;
+            border: 2px solid #ffd966aa;
+        }
+        .player-area.active-turn {
+            border: 3px solid #ffd966;
+            box-shadow: 0 0 20px rgba(255,217,102,0.5);
+        }
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .player-name-big {
+            font-size: 1.4rem;
+            font-weight: bold;
+            background: #2c1a10cc;
+            padding: 6px 20px;
+            border-radius: 40px;
+            color: #ffefb0;
+        }
+        .player-points {
+            background: #1e1a0ecc;
+            padding: 6px 18px;
+            border-radius: 40px;
+            color: #ffaa44;
+            font-weight: bold;
+        }
+        .player-hand {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            min-height: 170px;
+        }
+        .card {
+            width: 104px;
+            height: 159px;
+            border-radius: 10px;
+            box-shadow: -2px 2px 8px rgba(0,0,0,0.4);
+            transition: 0.1s;
+            cursor: pointer;
+        }
+        .card.selected {
+            transform: translateY(-20px);
+            filter: drop-shadow(0 0 8px gold);
+        }
+
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            background: #f3b33d;
+            border: none;
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 10px 24px;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #7a4c1a;
+            color: #2c1a0c;
+        }
+        button:active { transform: translateY(2px); box-shadow: 0 1px 0 #7a4c1a; }
+        button:disabled { opacity: 0.5; }
+
+        .log-area {
+            background: #1e2a1ac9;
+            color: #f7eac5;
+            border-radius: 30px;
+            padding: 10px;
+            margin-top: 15px;
+            text-align: center;
+            max-height: 70px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 700px) {
+            .card, .card-pile { width: 78px; height: 119px; }
+            .opponent-card { width: 120px; }
+        }
+        @media (max-width: 550px) {
+            .card, .card-pile { width: 62px; height: 95px; }
+        }
+
+        .footer { text-align: center; margin-top: 12px; color: #e9f5cf; font-size: 0.75rem; }
+        
+        .turn-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffd966;
+            color: #2c1a0c;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            z-index: 100;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .turn-indicator.your-turn {
+            background: #4caf50;
+            color: white;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.8; transform: translateX(-50%) scale(1); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+            100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
         }
 
         /* Pantallas */
         .screen {
-            background: rgba(255, 255, 255, 0.96);
+            background: rgba(255,255,255,0.96);
             border-radius: 48px;
             padding: 24px 20px;
             text-align: center;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
-        h1 {
-            color: #2c5a2a;
-            font-size: 1.8rem;
-            margin-bottom: 8px;
-        }
-        .sub {
-            color: #666;
-            margin-bottom: 25px;
-            font-size: 0.85rem;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #f3b33d, #e09d32);
-            border: none;
-            padding: 16px;
-            border-radius: 60px;
-            font-size: 1rem;
-            font-weight: bold;
-            width: 100%;
-            margin: 8px 0;
-            cursor: pointer;
-            box-shadow: 0 4px 0 #7a4c1a;
-            transition: 0.05s linear;
-            color: #2c1a0c;
-        }
-        .btn:active {
-            transform: translateY(2px);
-            box-shadow: 0 1px 0 #7a4c1a;
-        }
-        .btn-green {
-            background: #2e7d32;
-            color: white;
-            box-shadow: 0 4px 0 #1b5e20;
-        }
-        .btn-blue {
-            background: #1976d2;
-            color: white;
-        }
-
+        .hidden { display: none; }
+        .btn-green { background: #2e7d32; color: white; box-shadow: 0 4px 0 #1b5e20; }
         input {
             width: 100%;
             padding: 14px;
@@ -82,7 +278,6 @@
             margin: 15px 0;
             font-weight: bold;
         }
-
         .code-box {
             background: #2c1a10;
             color: #ffd966;
@@ -92,11 +287,10 @@
             letter-spacing: 6px;
             margin: 15px 0;
         }
-
         .players-list {
             list-style: none;
             margin: 15px 0;
-            max-height: 250px;
+            max-height: 200px;
             overflow-y: auto;
         }
         .players-list li {
@@ -104,300 +298,83 @@
             padding: 12px;
             margin: 8px 0;
             border-radius: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
-
-        .hidden {
-            display: none;
-        }
-
         .status {
             padding: 10px;
             border-radius: 30px;
             margin-top: 10px;
             font-size: 0.8rem;
         }
-        .status-ok {
-            background: #c8e6c9;
-            color: #2e7d32;
-        }
-        .status-wait {
-            background: #fff3e0;
-            color: #e65100;
-        }
-
-        /* ========== PANTALLA DE JUEGO ========== */
-        .game-header {
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 30px;
-            padding: 12px;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .turn-badge {
-            background: #ffd966;
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-weight: bold;
-            font-size: 0.8rem;
-        }
-        .your-turn {
-            background: #4caf50;
-            color: white;
-            animation: pulseText 1s infinite;
-        }
-        @keyframes pulseText {
-            0% { opacity: 0.7; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.05); }
-            100% { opacity: 0.7; transform: scale(1); }
-        }
-
-        /* Lista de oponentes (solo puntos, sin cartas) */
-        .opponents-list {
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            margin-bottom: 15px;
-            padding-bottom: 5px;
-        }
-        .opponent-card {
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 25px;
-            padding: 12px;
-            min-width: 100px;
-            text-align: center;
-            transition: 0.2s;
-        }
-        .opponent-card.active {
-            background: rgba(255, 215, 0, 0.4);
-            border: 2px solid gold;
-        }
-        .opponent-name {
-            color: #ffefb0;
-            font-weight: bold;
-            font-size: 0.85rem;
-        }
-        .opponent-points {
-            color: #ffaa44;
-            font-size: 1rem;
-            font-weight: bold;
-            margin-top: 5px;
-        }
-        .opponent-cards-count {
-            font-size: 0.65rem;
-            color: #ccc;
-            margin-top: 4px;
-        }
-
-        /* Zona central */
-        .center-area {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin: 15px 0;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 60px;
-        }
-        .pile {
-            text-align: center;
-            cursor: pointer;
-            transition: 0.1s;
-            border-radius: 20px;
-            padding: 10px;
-        }
-        .pile:active {
-            transform: scale(0.97);
-        }
-        .pile-label {
-            color: #ffefb0;
-            font-size: 0.7rem;
-            margin-bottom: 5px;
-        }
-        .card-pile {
-            width: 85px;
-            height: 130px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-            background-size: cover !important;
-        }
-        .card-count {
-            color: white;
-            font-size: 11px;
-            margin-top: 5px;
-        }
-
-        /* Mi mano */
-        .my-area {
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 35px;
-            padding: 16px;
-            margin-top: 15px;
-        }
-        .my-title {
-            color: #ffefb0;
-            margin-bottom: 12px;
-            font-size: 0.85rem;
-            display: flex;
-            justify-content: space-between;
-        }
-        .my-hand {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-            flex-wrap: wrap;
-            transition: 0.2s;
-        }
-        .card {
-            width: 75px;
-            height: 115px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.1s;
-            box-shadow: 0 4px 8px black;
-            background-size: cover !important;
-        }
-        .card.selected {
-            transform: translateY(-12px);
-            filter: drop-shadow(0 0 8px gold);
-        }
-        .card:active {
-            transform: scale(0.95);
-        }
-
-        .game-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin: 15px 0;
-            flex-wrap: wrap;
-        }
-        .game-buttons button {
-            width: auto;
-            padding: 10px 18px;
-            font-size: 0.85rem;
-            margin: 0;
-        }
-
-        .log {
-            background: #1e2a1ac9;
-            color: #f7eac5;
-            border-radius: 25px;
-            padding: 10px;
-            font-size: 0.7rem;
-            text-align: center;
-            max-height: 65px;
-            overflow-y: auto;
-            margin-top: 10px;
-        }
-
-        /* Animaciones */
-        @keyframes heartbeat {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.08); box-shadow: 0 0 15px gold; }
-            100% { transform: scale(1); }
-        }
-        .pulse {
-            animation: heartbeat 0.5s ease-in-out;
-        }
-        .mano-pulse {
-            animation: heartbeat 0.5s ease-in-out;
-        }
-
-        @media (max-width: 500px) {
-            .card { width: 62px; height: 95px; }
-            .card-pile { width: 70px; height: 107px; }
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 12px;
-            color: #c8e6c9;
-            font-size: 0.65rem;
-        }
-        .back-btn {
-            background: #757575;
-            color: white;
-            margin-top: 10px;
-        }
+        .status-ok { background: #c8e6c9; color: #2e7d32; }
+        .status-wait { background: #fff3e0; color: #e65100; }
+        .back-btn { background: #757575; color: white; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Pantalla de inicio -->
-        <div id="menuScreen" class="screen">
-            <h1>🎴 Chinchón Online</h1>
-            <div class="sub">Juega con amigos - Cada uno en su celular</div>
-            <button class="btn btn-green" id="createGameBtn">🏠 Crear Partida</button>
-            <div style="margin: 10px 0;">o</div>
-            <input type="text" id="roomCodeInput" placeholder="Código" maxlength="6">
-            <button class="btn" id="joinGameBtn">🔗 Unirse</button>
-            <div class="status status-wait" id="connectionStatus">📡 Conectando...</div>
-        </div>
-
-        <!-- Pantalla de sala -->
-        <div id="lobbyScreen" class="screen hidden">
-            <h1>Sala de Espera</h1>
-            <div>Código:</div>
-            <div class="code-box" id="roomCodeDisplay">----</div>
-            <div>Jugadores:</div>
-            <ul class="players-list" id="playersList"></ul>
-            <button class="btn btn-green" id="startGameBtn">🎮 Empezar Partida</button>
-            <button class="btn back-btn" id="lobbyBackBtn">⬅️ Salir</button>
-            <div class="status status-wait" id="lobbyStatus">Esperando jugadores...</div>
-        </div>
-
-        <!-- Pantalla de juego -->
-        <div id="gameScreen" class="hidden">
-            <div class="game-header">
-                <span class="turn-badge" id="turnText">Turno</span>
-                <span id="myPoints" style="color:#ffaa44; font-weight:bold;">0 pts</span>
-            </div>
-
-            <div class="opponents-list" id="opponentsList"></div>
-
-            <div class="center-area">
-                <div class="pile" id="mazoBtn">
-                    <div class="pile-label">📚 MAZO</div>
-                    <div class="card-pile" id="deckPile"></div>
-                    <div class="card-count" id="deckCount">0</div>
-                </div>
-                <div class="pile" id="descarteBtn">
-                    <div class="pile-label">🗑️ DESCARTE</div>
-                    <div class="card-pile" id="discardPile"></div>
-                </div>
-            </div>
-
-            <div class="my-area">
-                <div class="my-title">
-                    <span>📌 Tus cartas:</span>
-                    <span id="selectedInfo" style="font-size:0.7rem; color:#ffaa44;"></span>
-                </div>
-                <div class="my-hand" id="myHand"></div>
-            </div>
-
-            <div class="game-buttons">
-                <button id="closeBtn">✂️ CERRAR</button>
-            </div>
-            <div class="log" id="gameLog"></div>
-            <button class="btn back-btn" id="gameBackBtn">🏠 Salir</button>
-            <div class="footer">★ TOCÁ: MAZO (robar) | CARTA (seleccionar) | DESCARTE (descartar) | CERRAR (si podés) ★</div>
-        </div>
+<div class="game-container">
+    <!-- Pantalla inicio -->
+    <div id="menuScreen" class="screen">
+        <h1>🎴 Chinchón Online</h1>
+        <div class="sub" style="color:#666; margin-bottom:20px;">Cada uno en su celular</div>
+        <button class="btn-green" id="createGameBtn">🏠 Crear Partida</button>
+        <div style="margin: 10px 0;">o</div>
+        <input type="text" id="roomCodeInput" placeholder="Código" maxlength="6">
+        <button id="joinGameBtn">🔗 Unirse</button>
+        <div class="status status-wait" id="connectionStatus">📡 Conectando...</div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <!-- Pantalla sala -->
+    <div id="lobbyScreen" class="screen hidden">
+        <h1>Sala de Espera</h1>
+        <div class="code-box" id="roomCodeDisplay">----</div>
+        <ul class="players-list" id="playersList"></ul>
+        <button class="btn-green" id="startGameBtn">🎮 Empezar Partida</button>
+        <button class="back-btn" id="lobbyBackBtn">⬅️ Salir</button>
+        <div class="status status-wait" id="lobbyStatus">Esperando jugadores...</div>
+    </div>
 
-    <script>
-        // ============================================================
-        // CONFIGURACIÓN DE FIREBASE - PEGÁ TU CONFIGURACIÓN ACÁ
-        // ============================================================
-const firebaseConfig = {
+    <!-- Pantalla juego (la misma que funciona) -->
+    <div id="gameScreen" class="hidden">
+        <div class="opponents-area" id="opponentsArea"></div>
+
+        <div class="center-area">
+            <div class="pile" id="mazoBtn">
+                <div class="pile-label">📚 MAZO</div>
+                <div id="deckCard" class="card-pile"></div>
+                <div class="card-count" id="deckCount">0 cartas</div>
+            </div>
+            <div class="pile" id="descarteBtn">
+                <div class="pile-label">🗑️ DESCARTE</div>
+                <div id="discardCard" class="card-pile"></div>
+            </div>
+        </div>
+
+        <div class="player-area" id="playerArea">
+            <div class="player-header">
+                <span class="player-name-big" id="playerName">Jugador</span>
+                <span class="player-points" id="playerPoints">0 pts</span>
+            </div>
+            <div class="player-hand" id="playerHand"></div>
+        </div>
+
+        <div class="game-controls">
+            <button id="closeRoundBtn">✂️ CERRAR RONDA ✂️</button>
+        </div>
+        <div class="log-area" id="gameLog"></div>
+        <div class="footer">★ TOCÁ: MAZO (robar) | CARTA (seleccionar) | DESCARTE (descartar) | CERRAR ★</div>
+    </div>
+</div>
+
+<div class="turn-indicator" id="turnIndicator">🎯 Cargando...</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<script>
+    // ============================================================
+    // CONFIGURACIÓN DE FIREBASE - ¡PONÉ TU CONFIGURACIÓN ACÁ!
+    // ============================================================
+    const firebaseConfig = {
   apiKey: "AIzaSyBq3DeZQz9-4gpOe2YyVPLRRAv8jsGcldk",
   authDomain: "juegoscartas-eac64.firebaseapp.com",
   databaseURL: "https://juegoscartas-eac64-default-rtdb.firebaseio.com",
@@ -407,556 +384,530 @@ const firebaseConfig = {
   appId: "1:671826149545:web:f9f706575f4d3df3b229b8"
 };
     
-        
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
 
-        // ============================================================
-        // CONFIGURACIÓN DE LA IMAGEN
-        // ============================================================
-        const IMAGE_FILE = "Baraja_española_completa.png";
-        const CARD_W = 208, CARD_H = 319, SPRITE_W = 2496, SPRITE_H = 1595;
-        const PALO_FILA = { "oros": 0, "copas": 1, "espadas": 2, "bastos": 3 };
-        
-        let SPRITE_URL = null;
-        
-        function getCardBackground(carta) {
-            if (!SPRITE_URL || !carta) return "background: #4a3727;";
-            let fila, col;
-            if (carta.esComodin) { fila = 4; col = 0; }
-            else { fila = PALO_FILA[carta.palo]; col = carta.numero - 1; }
-            const x = col * CARD_W;
-            const y = fila * CARD_H;
-            const scale = 0.48;
-            return `background-image: url('${SPRITE_URL}'); background-position: -${x * scale}px -${y * scale}px; background-size: ${SPRITE_W * scale}px ${SPRITE_H * scale}px; background-repeat: no-repeat;`;
-        }
-        
-        function getDorso() {
-            if (!SPRITE_URL) return "background: #4a3727;";
-            const x = 1 * CARD_W, y = 4 * CARD_H, scale = 0.48;
-            return `background-image: url('${SPRITE_URL}'); background-position: -${x * scale}px -${y * scale}px; background-size: ${SPRITE_W * scale}px ${SPRITE_H * scale}px; background-repeat: no-repeat;`;
-        }
+    // ============================================================
+    // CONFIGURACIÓN DE LA IMAGEN (LA QUE FUNCIONA)
+    // ============================================================
+    const IMAGE_FILENAME = "Baraja_española_completa.png";
+    const CARD_W = 208;
+    const CARD_H = 319;
+    const SPRITE_W = 2496;
+    const SPRITE_H = 1595;
+    const PALO_FILA = { "oros": 0, "copas": 1, "espadas": 2, "bastos": 3 };
+    
+    let SPRITE_URL = null;
+    
+    function getCardBackground(carta) {
+        if (!SPRITE_URL) return "background: #4a3727; background-size: cover;";
+        let fila, columna;
+        if (carta.esComodin) { fila = 4; columna = 0; }
+        else { fila = PALO_FILA[carta.palo]; columna = carta.numero - 1; }
+        const x = columna * CARD_W;
+        const y = fila * CARD_H;
+        const scale = 0.5;
+        return `background-image: url('${SPRITE_URL}'); background-position: -${x * scale}px -${y * scale}px; background-size: ${SPRITE_W * scale}px ${SPRITE_H * scale}px; width: ${CARD_W * scale}px; height: ${CARD_H * scale}px; background-repeat: no-repeat;`;
+    }
+    
+    function getBackBackground() {
+        if (!SPRITE_URL) return "background: #4a3727; background-size: cover;";
+        const x = 1 * CARD_W;
+        const y = 4 * CARD_H;
+        const scale = 0.5;
+        return `background-image: url('${SPRITE_URL}'); background-position: -${x * scale}px -${y * scale}px; background-size: ${SPRITE_W * scale}px ${SPRITE_H * scale}px; width: ${CARD_W * scale}px; height: ${CARD_H * scale}px; background-repeat: no-repeat;`;
+    }
 
-        // ============================================================
-        // LÓGICA DEL JUEGO
-        // ============================================================
-        const PALOS = ["oros", "copas", "espadas", "bastos"];
+    // ============================================================
+    // LÓGICA DEL JUEGO (la misma que funciona)
+    // ============================================================
+    const PALOS = ["oros", "copas", "espadas", "bastos"];
+    const NOMBRES = {1:"1",2:"2",3:"3",4:"4",5:"5",6:"6",7:"7",8:"8",9:"9",10:"S",11:"C",12:"R"};
+    
+    // Funciones del juego (las que ya funcionaban)
+    function crearBarajaConComodin() {
+        let baraja = [];
+        for(let palo of PALOS) for(let num=1; num<=12; num++) baraja.push({ palo, numero: num, esComodin: false });
+        baraja.push({ palo: "comodin", numero: 0, esComodin: true });
+        return baraja;
+    }
+    
+    function mezclarArray(arr) { for(let i=arr.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+    
+    function valorCarta(carta) { if(carta.esComodin) return 0; if(carta.numero >= 10) return 10; return carta.numero; }
+    
+    function encontrarCartasCombinadas(cartas) {
+        let comodines = cartas.map((c, idx) => c.esComodin ? idx : -1).filter(i => i !== -1);
+        let normales = cartas.map((c, idx) => c.esComodin ? null : { idx, palo: c.palo, numero: c.numero }).filter(c => c !== null);
+        let usado = new Array(cartas.length).fill(false);
+        let usadosComodin = 0;
         
-        function crearBaraja() {
-            let baraja = [];
-            for(let palo of PALOS) for(let num=1; num<=12; num++) baraja.push({ palo, numero: num, esComodin: false });
-            baraja.push({ palo: "comodin", numero: 0, esComodin: true });
-            return baraja;
-        }
-        
-        function mezclar(arr) {
-            for(let i=arr.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
-            return arr;
-        }
-        
-        function valorCarta(c) { if(c.esComodin) return 0; if(c.numero >= 10) return 10; return c.numero; }
-        
-        function encontrarCombinadas(cartas) {
-            let comodines = cartas.map((c, idx) => c.esComodin ? idx : -1).filter(i => i !== -1);
-            let normales = cartas.map((c, idx) => c.esComodin ? null : { idx, palo: c.palo, num: c.numero }).filter(c => c !== null);
-            let usado = new Array(cartas.length).fill(false);
-            let usadosComodin = 0;
-            
-            function buscarGrupo() {
-                for(let i=0; i<normales.length; i++) {
-                    if(usado[normales[i].idx]) continue;
-                    let grupo = [normales[i].idx];
-                    for(let j=i+1; j<normales.length; j++) {
-                        if(!usado[normales[j].idx] && normales[j].num === normales[i].num && cartas[normales[j].idx].palo !== cartas[normales[i].idx].palo) {
-                            if(grupo.length < 4 && !grupo.some(idx => cartas[idx].palo === cartas[normales[j].idx].palo)) grupo.push(normales[j].idx);
-                        }
+        function buscarGrupo() {
+            for(let i=0; i<normales.length; i++) {
+                if(usado[normales[i].idx]) continue;
+                let grupo = [normales[i].idx];
+                for(let j=i+1; j<normales.length; j++) {
+                    if(!usado[normales[j].idx] && normales[j].numero === normales[i].numero && normales[j].palo !== cartas[normales[i].idx].palo) {
+                        if(grupo.length < 4 && !grupo.some(idx => cartas[idx].palo === cartas[normales[j].idx].palo)) grupo.push(normales[j].idx);
                     }
-                    if(grupo.length >= 3) { grupo.forEach(idx => usado[idx]=true); return true; }
-                    if(grupo.length === 2 && usadosComodin < comodines.length) { grupo.forEach(idx => usado[idx]=true); usado[comodines[usadosComodin++]] = true; return true; }
                 }
-                return false;
-            }
-            
-            function buscarEscalera() {
-                for(let palo of PALOS) {
-                    let cartasPalo = [];
-                    for(let idx=0; idx<normales.length; idx++) if(!usado[normales[idx].idx] && cartas[normales[idx].idx].palo === palo) cartasPalo.push({idx: normales[idx].idx, num: normales[idx].num});
-                    cartasPalo.sort((a,b)=>a.num-b.num);
-                    let temp = [], mejor = [];
-                    for(let i=0; i<cartasPalo.length; i++) {
-                        if(temp.length===0 || cartasPalo[i].num === temp[temp.length-1].num+1) temp.push(cartasPalo[i]);
-                        else { if(temp.length>=3) mejor.push(...temp); temp = [cartasPalo[i]]; }
-                    }
-                    if(temp.length>=3) mejor.push(...temp);
-                    if(mejor.length>=3) { for(let item of mejor) usado[item.idx]=true; return true; }
-                    if(mejor.length === 2 && usadosComodin < comodines.length) { for(let item of mejor) usado[item.idx]=true; usado[comodines[usadosComodin++]] = true; return true; }
-                }
-                return false;
-            }
-            
-            let cambio = true;
-            while(cambio) { cambio = buscarGrupo() || buscarEscalera(); }
-            return usado;
-        }
-        
-        function calcularPuntosSueltas(mano) {
-            if(mano.length === 0) return 0;
-            let combinadas = encontrarCombinadas(mano);
-            let puntos = 0;
-            for(let i=0; i<mano.length; i++) if(!combinadas[i]) puntos += valorCarta(mano[i]);
-            return puntos;
-        }
-        
-        function esCerrable(mano) {
-            if(mano.length === 0) return true;
-            let combinadas = encontrarCombinadas(mano);
-            let sueltas = combinadas.filter(u => !u).length;
-            if(sueltas === 0) return true;
-            if(sueltas === 1) {
-                let idxSuelta = combinadas.findIndex(u => !u);
-                return valorCarta(mano[idxSuelta]) <= 4;
+                if(grupo.length >= 3) { grupo.forEach(idx => usado[idx]=true); return true; }
+                if(grupo.length === 2 && usadosComodin < comodines.length) { grupo.forEach(idx => usado[idx]=true); usado[comodines[usadosComodin++]] = true; return true; }
             }
             return false;
         }
         
-        function esChinchon(mano) {
-            if(mano.length !== 7) return false;
-            let palo = null, nums = [];
-            for(let c of mano) {
-                if(c.esComodin) continue;
-                if(palo === null) palo = c.palo;
-                if(c.palo !== palo) return false;
-                nums.push(c.numero);
-            }
-            nums.sort((a,b)=>a-b);
-            for(let i=0; i<nums.length-1; i++) if(nums[i+1] !== nums[i]+1) return false;
-            return true;
-        }
-        
-        function reciclarMazo() {
-            if(deck.length > 0) return;
-            if(discardPile.length <= 1) return;
-            let ultima = discardPile.pop();
-            let nuevas = mezclar([...discardPile]);
-            deck = nuevas;
-            discardPile = [ultima];
-            addLog("♻️ Mazo reciclado");
-        }
-        
-        // ============================================================
-        // MULTIJUGADOR
-        // ============================================================
-        let myId = null;
-        let roomId = null;
-        let isHost = false;
-        let players = [];
-        let gameRef = null;
-        
-        // Estado del juego
-        let myHand = [];
-        let deck = [];
-        let discardPile = [];
-        let currentTurn = null;
-        let gameActive = false;
-        let rondaEnCurso = false;
-        let hasDrawn = false;
-        let selectedCard = null;
-        let myPointsValue = 0;
-        let otherPlayers = [];
-        
-        // DOM
-        const menuScreen = document.getElementById("menuScreen");
-        const lobbyScreen = document.getElementById("lobbyScreen");
-        const gameScreen = document.getElementById("gameScreen");
-        const roomCodeDisplay = document.getElementById("roomCodeDisplay");
-        const playersList = document.getElementById("playersList");
-        const lobbyStatus = document.getElementById("lobbyStatus");
-        const startGameBtn = document.getElementById("startGameBtn");
-        const createGameBtn = document.getElementById("createGameBtn");
-        const joinGameBtn = document.getElementById("joinGameBtn");
-        const roomCodeInput = document.getElementById("roomCodeInput");
-        const lobbyBackBtn = document.getElementById("lobbyBackBtn");
-        const connectionStatus = document.getElementById("connectionStatus");
-        const gameBackBtn = document.getElementById("gameBackBtn");
-        
-        // Elementos juego
-        const opponentsList = document.getElementById("opponentsList");
-        const turnText = document.getElementById("turnText");
-        const myPointsSpan = document.getElementById("myPoints");
-        const deckPileDiv = document.getElementById("deckPile");
-        const deckCountSpan = document.getElementById("deckCount");
-        const discardPileDiv = document.getElementById("discardPile");
-        const myHandDiv = document.getElementById("myHand");
-        const selectedInfo = document.getElementById("selectedInfo");
-        const gameLog = document.getElementById("gameLog");
-        const closeBtn = document.getElementById("closeBtn");
-        const mazoBtn = document.getElementById("mazoBtn");
-        const descarteBtn = document.getElementById("descarteBtn");
-        
-        function addLog(msg) {
-            gameLog.innerHTML = msg + "<br>" + gameLog.innerHTML;
-            while(gameLog.children.length > 5) gameLog.removeChild(gameLog.lastChild);
-        }
-        
-        function animar(elemento, clase) {
-            if(!elemento) return;
-            elemento.classList.remove(clase);
-            setTimeout(() => elemento.classList.add(clase), 10);
-            setTimeout(() => elemento.classList.remove(clase), 500);
-        }
-        
-        function generarCodigo() { return Math.floor(100000 + Math.random() * 900000).toString(); }
-        function generarId() { return 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6); }
-        
-        // ========== UI DEL JUEGO ==========
-        function actualizarUIJuego() {
-            // Oponentes (solo puntos, sin cartas)
-            opponentsList.innerHTML = "";
-            for(let p of otherPlayers) {
-                if(p.id === myId) continue;
-                const div = document.createElement("div");
-                div.className = `opponent-card ${currentTurn === p.id ? "active" : ""}`;
-                div.innerHTML = `
-                    <div class="opponent-name">${p.name}</div>
-                    <div class="opponent-points">${p.points || 0} pts</div>
-                    <div class="opponent-cards-count">${p.handCount || 7} cartas</div>
-                `;
-                opponentsList.appendChild(div);
-            }
-            
-            // Mazo
-            deckPileDiv.style.cssText = getDorso();
-            deckCountSpan.innerText = deck.length;
-            
-            // Descarte
-            if(discardPile.length > 0) {
-                discardPileDiv.style.cssText = getCardBackground(discardPile[discardPile.length-1]);
-            } else {
-                discardPileDiv.style.cssText = "background: #4a3727;";
-            }
-            
-            // Mi mano
-            myHandDiv.innerHTML = "";
-            myHand.forEach((card, idx) => {
-                const cardDiv = document.createElement("div");
-                cardDiv.className = `card ${selectedCard === idx ? "selected" : ""}`;
-                cardDiv.style.cssText = getCardBackground(card);
-                if(gameActive && rondaEnCurso && currentTurn === myId && hasDrawn) {
-                    cardDiv.onclick = () => {
-                        if(selectedCard === idx) {
-                            selectedCard = null;
-                            selectedInfo.innerText = "";
-                        } else {
-                            selectedCard = idx;
-                            selectedInfo.innerText = "✅ Carta seleccionada";
-                        }
-                        actualizarUIJuego();
-                    };
+        function buscarEscalera() {
+            for(let palo of PALOS) {
+                let cartasPalo = [];
+                for(let idx=0; idx<normales.length; idx++) if(!usado[normales[idx].idx] && cartas[normales[idx].idx].palo === palo) cartasPalo.push({idx: normales[idx].idx, num: normales[idx].numero});
+                cartasPalo.sort((a,b)=>a.num-b.num);
+                let temp = [], mejor = [];
+                for(let i=0; i<cartasPalo.length; i++) {
+                    if(temp.length===0 || cartasPalo[i].num === temp[temp.length-1].num+1) temp.push(cartasPalo[i]);
+                    else { if(temp.length>=3) mejor.push(...temp); temp = [cartasPalo[i]]; }
                 }
-                myHandDiv.appendChild(cardDiv);
-            });
-            
-            myPointsSpan.innerText = `${myPointsValue} pts`;
-            
-            // Turno
-            if(currentTurn === myId && gameActive && rondaEnCurso) {
-                turnText.innerHTML = "🎯 TU TURNO";
-                turnText.classList.add("your-turn");
-            } else {
-                let nombreTurno = otherPlayers.find(p => p.id === currentTurn)?.name || "otro";
-                turnText.innerHTML = `⏳ Turno de ${nombreTurno}`;
-                turnText.classList.remove("your-turn");
+                if(temp.length>=3) mejor.push(...temp);
+                if(mejor.length>=3) { for(let item of mejor) usado[item.idx]=true; return true; }
+                if(mejor.length === 2 && usadosComodin < comodines.length) { for(let item of mejor) usado[item.idx]=true; usado[comodines[usadosComodin++]] = true; return true; }
             }
-            
-            closeBtn.disabled = !(gameActive && rondaEnCurso && currentTurn === myId && hasDrawn);
-            
-            // Animaciones
-            if(currentTurn === myId && gameActive && rondaEnCurso && !hasDrawn) {
-                animar(mazoBtn, 'pulse');
-                animar(descarteBtn, 'pulse');
-            } else if(currentTurn === myId && gameActive && rondaEnCurso && hasDrawn && selectedCard === null) {
-                animar(myHandDiv, 'mano-pulse');
-            } else if(currentTurn === myId && gameActive && rondaEnCurso && hasDrawn && selectedCard !== null) {
-                animar(descarteBtn, 'pulse');
-                animar(mazoBtn, 'pulse');
+            return false;
+        }
+        
+        let cambio = true;
+        while(cambio) { cambio = buscarGrupo() || buscarEscalera(); }
+        return usado;
+    }
+    
+    function calcularPuntosSueltas(mano) {
+        if (mano.length === 0) return 0;
+        let combinadas = encontrarCartasCombinadas(mano);
+        let puntos = 0;
+        for (let i = 0; i < mano.length; i++) if (!combinadas[i]) puntos += valorCarta(mano[i]);
+        return puntos;
+    }
+    
+    function esCerrable(mano) {
+        if(mano.length === 0) return true;
+        let combinadas = encontrarCartasCombinadas(mano);
+        let sueltas = combinadas.filter(u => !u).length;
+        return sueltas === 0 || (sueltas === 1 && valorCarta(mano[combinadas.findIndex(u => !u)]) <= 4);
+    }
+    
+    function reciclarMazo() {
+        if (deck.length > 0) return;
+        if (discardPile.length <= 1) return;
+        let ultima = discardPile.pop();
+        let nuevas = mezclarArray([...discardPile]);
+        deck = nuevas;
+        discardPile = [ultima];
+        addLog(`♻️ Mazo reciclado`);
+    }
+
+    // ============================================================
+    // MULTIJUGADOR
+    // ============================================================
+    let myId = null;
+    let roomId = null;
+    let isHost = false;
+    let players = [];
+    let gameRef = null;
+    
+    // Estado del juego
+    let myHand = [];
+    let deck = [];
+    let discardPile = [];
+    let currentTurn = null;
+    let gameActive = false;
+    let rondaEnCurso = false;
+    let hasDrawn = false;
+    let selectedCardIndex = null;
+    let myPoints = 0;
+    let otherPlayers = [];
+    
+    // DOM
+    const menuScreen = document.getElementById("menuScreen");
+    const lobbyScreen = document.getElementById("lobbyScreen");
+    const gameScreen = document.getElementById("gameScreen");
+    const roomCodeDisplay = document.getElementById("roomCodeDisplay");
+    const playersList = document.getElementById("playersList");
+    const lobbyStatus = document.getElementById("lobbyStatus");
+    const startGameBtn = document.getElementById("startGameBtn");
+    const createGameBtn = document.getElementById("createGameBtn");
+    const joinGameBtn = document.getElementById("joinGameBtn");
+    const roomCodeInput = document.getElementById("roomCodeInput");
+    const lobbyBackBtn = document.getElementById("lobbyBackBtn");
+    const connectionStatus = document.getElementById("connectionStatus");
+    
+    const opponentsArea = document.getElementById("opponentsArea");
+    const deckCardDiv = document.getElementById("deckCard");
+    const discardCardDiv = document.getElementById("discardCard");
+    const deckCountSpan = document.getElementById("deckCount");
+    const playerHandDiv = document.getElementById("playerHand");
+    const playerPointsSpan = document.getElementById("playerPoints");
+    const logDiv = document.getElementById("gameLog");
+    const closeRoundBtn = document.getElementById("closeRoundBtn");
+    const mazoBtn = document.getElementById("mazoBtn");
+    const descarteBtn = document.getElementById("descarteBtn");
+    const turnIndicator = document.getElementById("turnIndicator");
+    const playerArea = document.getElementById("playerArea");
+    
+    function addLog(msg) { 
+        logDiv.innerHTML = msg + "<br>" + logDiv.innerHTML; 
+        if(logDiv.children.length > 6) logDiv.lastChild?.remove();
+    }
+    
+    function animar(elemento, clase) {
+        if (!elemento) return;
+        elemento.classList.remove(clase);
+        setTimeout(() => { elemento.classList.add(clase); }, 10);
+        setTimeout(() => { elemento.classList.remove(clase); }, 600);
+    }
+    
+    function generarCodigo() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+    function generarId() { return 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6); }
+    
+    // UI del juego
+    function actualizarUIJuego() {
+        // Mostrar oponentes (solo puntos, sin dorsos)
+        opponentsArea.innerHTML = "";
+        for(let p of otherPlayers) {
+            const div = document.createElement("div");
+            div.className = `opponent-card ${currentTurn === p.id ? "active-turn" : ""}`;
+            div.innerHTML = `
+                <div class="opponent-name">${p.name}</div>
+                <div class="opponent-points">${p.points || 0} pts</div>
+                <div style="font-size:0.7rem;">${p.handCount || 7} cartas</div>
+            `;
+            opponentsArea.appendChild(div);
+        }
+        
+        // Mazo
+        deckCardDiv.style.cssText = getBackBackground();
+        deckCountSpan.innerText = deck.length;
+        
+        // Descarte
+        if(discardPile.length > 0) {
+            discardCardDiv.style.cssText = getCardBackground(discardPile[discardPile.length-1]);
+        } else {
+            discardCardDiv.style.cssText = "background: #4a3727;";
+        }
+        
+        // Mi mano
+        playerHandDiv.innerHTML = "";
+        myHand.forEach((card, idx) => {
+            const cardElem = document.createElement("div");
+            cardElem.className = `card ${selectedCardIndex === idx ? "selected" : ""}`;
+            cardElem.style.cssText = getCardBackground(card);
+            if(gameActive && rondaEnCurso && currentTurn === myId && hasDrawn) {
+                cardElem.onclick = () => { 
+                    if (selectedCardIndex === idx) {
+                        selectedCardIndex = null;
+                    } else {
+                        selectedCardIndex = idx;
+                    }
+                    actualizarUIJuego(); 
+                };
             }
+            playerHandDiv.appendChild(cardElem);
+        });
+        
+        playerPointsSpan.innerText = `${myPoints} pts`;
+        
+        // Turno
+        if(currentTurn === myId && gameActive && rondaEnCurso) {
+            turnIndicator.innerHTML = "🎯 ¡TU TURNO!";
+            turnIndicator.className = "turn-indicator your-turn";
+            playerArea.classList.add("active-turn");
+        } else if(gameActive && rondaEnCurso) {
+            let nombreTurno = otherPlayers.find(p => p.id === currentTurn)?.name || "otro";
+            turnIndicator.innerHTML = `⏳ Turno de ${nombreTurno}`;
+            turnIndicator.className = "turn-indicator";
+            playerArea.classList.remove("active-turn");
         }
         
-        // ========== ACCIONES ==========
-        function robarMazo() {
-            if(!gameActive || !rondaEnCurso || currentTurn !== myId || hasDrawn) return;
-            if(deck.length === 0) {
-                reciclarMazo();
-                if(deck.length === 0) { addLog("No hay más cartas"); return; }
+        closeRoundBtn.disabled = !(gameActive && rondaEnCurso && currentTurn === myId && hasDrawn);
+        
+        // Animaciones
+        if(currentTurn === myId && gameActive && rondaEnCurso && !hasDrawn) {
+            animar(mazoBtn, 'pulse-animation');
+            animar(descarteBtn, 'pulse-animation');
+        } else if(currentTurn === myId && gameActive && rondaEnCurso && hasDrawn && selectedCardIndex === null) {
+            animar(playerHandDiv, 'mano-pulse');
+        } else if(currentTurn === myId && gameActive && rondaEnCurso && hasDrawn && selectedCardIndex !== null) {
+            animar(descarteBtn, 'pulse-animation');
+            animar(mazoBtn, 'pulse-animation');
+        }
+    }
+    
+    // Acciones
+    function robarMazo() {
+        if(!rondaEnCurso || currentTurn !== myId || hasDrawn) return;
+        if(deck.length === 0) {
+            reciclarMazo();
+            if(deck.length === 0) return;
+        }
+        let carta = deck.pop();
+        myHand.push(carta);
+        hasDrawn = true;
+        addLog("Robaste del mazo");
+        
+        gameRef.child('gameState').update({
+            deck: deck,
+            hands: { [myId]: myHand },
+            hasDrawn: true
+        });
+        actualizarUIJuego();
+    }
+    
+    function robarDescarte() {
+        if(!rondaEnCurso || currentTurn !== myId || hasDrawn) return;
+        if(discardPile.length === 0) return;
+        let carta = discardPile.pop();
+        myHand.push(carta);
+        hasDrawn = true;
+        addLog("Robaste del descarte");
+        
+        gameRef.child('gameState').update({
+            discardPile: discardPile,
+            hands: { [myId]: myHand },
+            hasDrawn: true
+        });
+        actualizarUIJuego();
+    }
+    
+    function descartar() {
+        if(!rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCardIndex === null) return;
+        let carta = myHand.splice(selectedCardIndex, 1)[0];
+        discardPile.push(carta);
+        selectedCardIndex = null;
+        hasDrawn = false;
+        addLog("Descartaste una carta");
+        
+        // Cambiar turno
+        let allPlayers = [...otherPlayers, { id: myId }];
+        let currentIdx = allPlayers.findIndex(p => p.id === currentTurn);
+        let nextTurn = allPlayers[(currentIdx + 1) % allPlayers.length].id;
+        
+        gameRef.child('gameState').update({
+            hands: { [myId]: myHand },
+            discardPile: discardPile,
+            currentTurn: nextTurn,
+            hasDrawn: false
+        });
+        actualizarUIJuego();
+    }
+    
+    function cerrar() {
+        if(!rondaEnCurso || currentTurn !== myId || !hasDrawn) return;
+        if(esCerrable(myHand)) {
+            addLog("✨ ¡Cerraste la ronda! ✨");
+            gameRef.child('gameState').update({ rondaEnCurso: false, winner: myId });
+        } else {
+            addLog("❌ No puedes cerrar. Mano no válida.");
+        }
+    }
+    
+    // ========== SALAS ==========
+    createGameBtn.onclick = () => {
+        myId = generarId();
+        roomId = generarCodigo();
+        isHost = true;
+        
+        roomCodeDisplay.innerText = roomId;
+        players = [{ id: myId, name: "Anfitrión", points: 0 }];
+        actualizarLista();
+        
+        gameRef = database.ref('games/' + roomId);
+        gameRef.set({
+            hostId: myId,
+            players: players,
+            status: 'waiting',
+            createdAt: Date.now()
+        });
+        
+        gameRef.on('value', (snap) => {
+            let data = snap.val();
+            if(data) {
+                players = data.players || [];
+                actualizarLista();
+                if(data.status === 'playing' && data.gameState) {
+                    iniciarJuego(data.gameState);
+                }
             }
-            let carta = deck.pop();
-            myHand.push(carta);
-            hasDrawn = true;
-            addLog("Robaste del mazo");
-            
-            gameRef.child('gameState').update({
-                deck: deck,
-                hands: { [myId]: myHand },
-                hasDrawn: true
-            });
-            actualizarUIJuego();
-        }
+        });
         
-        function robarDescarte() {
-            if(!gameActive || !rondaEnCurso || currentTurn !== myId || hasDrawn) return;
-            if(discardPile.length === 0) { addLog("No hay cartas en descarte"); return; }
-            let carta = discardPile.pop();
-            myHand.push(carta);
-            hasDrawn = true;
-            addLog("Robaste del descarte");
-            
-            gameRef.child('gameState').update({
-                discardPile: discardPile,
-                hands: { [myId]: myHand },
-                hasDrawn: true
-            });
-            actualizarUIJuego();
-        }
+        mostrarLobby(true);
+    };
+    
+    joinGameBtn.onclick = () => {
+        let code = roomCodeInput.value.trim();
+        if(code.length !== 6) { alert("Código de 6 dígitos"); return; }
         
-        function descartar() {
-            if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCard === null) return;
-            let carta = myHand.splice(selectedCard, 1)[0];
-            discardPile.push(carta);
-            selectedCard = null;
-            hasDrawn = false;
-            addLog("Descartaste una carta");
-            
-            // Cambiar turno
-            let playersList = otherPlayers.concat([{ id: myId }]);
-            let currentIdx = playersList.findIndex(p => p.id === currentTurn);
-            let nextTurn = playersList[(currentIdx + 1) % playersList.length].id;
-            
-            gameRef.child('gameState').update({
-                hands: { [myId]: myHand },
-                discardPile: discardPile,
-                currentTurn: nextTurn,
-                hasDrawn: false
-            });
-            actualizarUIJuego();
-        }
+        myId = generarId();
+        roomId = code;
+        isHost = false;
         
-        function cerrar() {
-            if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn) return;
-            if(esCerrable(myHand)) {
-                addLog("✨ ¡Cerraste la ronda! ✨");
-                finalizarRonda(myId);
-            } else {
-                addLog("❌ No puedes cerrar. Mano no válida.");
-            }
-        }
-        
-        function finalizarRonda(ganadorId) {
-            gameRef.child('gameState').update({
-                rondaEnCurso: false,
-                winner: ganadorId
-            });
-        }
-        
-        // ========== SALAS ==========
-        createGameBtn.onclick = () => {
-            myId = generarId();
-            roomId = generarCodigo();
-            isHost = true;
+        gameRef = database.ref('games/' + roomId);
+        gameRef.once('value', (snap) => {
+            let data = snap.val();
+            if(!data) { alert("Sala no encontrada"); return; }
+            if(data.status === 'playing') { alert("La partida ya comenzó"); return; }
             
-            roomCodeDisplay.innerText = roomId;
-            players = [{ id: myId, name: "Anfitrión", points: 0 }];
-            actualizarLista();
-            
-            gameRef = database.ref('games/' + roomId);
-            gameRef.set({
-                hostId: myId,
-                players: players,
-                status: 'waiting',
-                createdAt: Date.now()
-            });
+            let newPlayers = [...(data.players || []), { id: myId, name: "Jugador", points: 0 }];
+            gameRef.update({ players: newPlayers });
             
             gameRef.on('value', (snap) => {
-                let data = snap.val();
-                if(data) {
-                    players = data.players || [];
+                let newData = snap.val();
+                if(newData) {
+                    players = newData.players || [];
                     actualizarLista();
-                    if(data.status === 'playing' && data.gameState) {
-                        iniciarJuego(data.gameState);
+                    if(newData.status === 'playing' && newData.gameState) {
+                        iniciarJuego(newData.gameState);
                     }
                 }
             });
-            
-            mostrarLobby(true);
+            mostrarLobby(false);
+        });
+    };
+    
+    function actualizarLista() {
+        playersList.innerHTML = players.map(p => `<li>${p.name} ${p.id === myId ? '(tú)' : ''} ${p.id === players[0]?.id ? '👑' : ''}</li>`).join('');
+        
+        if(isHost && players.length >= 2) {
+            startGameBtn.disabled = false;
+            startGameBtn.style.opacity = '1';
+            lobbyStatus.innerHTML = "✅ ¡Listo! Puedes empezar.";
+            lobbyStatus.className = "status status-ok";
+        } else if(isHost) {
+            startGameBtn.disabled = true;
+            startGameBtn.style.opacity = '0.5';
+            lobbyStatus.innerHTML = "⏳ Esperando jugadores (mínimo 2)";
+            lobbyStatus.className = "status status-wait";
+        }
+    }
+    
+    function mostrarLobby(host) {
+        menuScreen.classList.add("hidden");
+        lobbyScreen.classList.remove("hidden");
+        gameScreen.classList.add("hidden");
+        if(!host) {
+            startGameBtn.classList.add("hidden");
+            lobbyStatus.innerHTML = "Conectado. Esperando al anfitrión...";
+        } else {
+            startGameBtn.classList.remove("hidden");
+        }
+    }
+    
+    startGameBtn.onclick = () => {
+        if(isHost && players.length >= 2) {
+            let gameState = crearEstadoInicial();
+            gameRef.update({ status: 'playing', gameState: gameState });
+            iniciarJuego(gameState);
+        }
+    };
+    
+    function crearEstadoInicial() {
+        let baraja = mezclarArray(crearBarajaConComodin());
+        let mazo = [...baraja];
+        let descartes = [mazo.pop()];
+        let manos = {};
+        for(let p of players) {
+            let mano = [];
+            for(let i=0; i<7; i++) mano.push(mazo.pop());
+            manos[p.id] = mano;
+        }
+        return {
+            deck: mazo,
+            discardPile: descartes,
+            hands: manos,
+            currentTurn: players[0].id,
+            points: Object.fromEntries(players.map(p => [p.id, 0])),
+            rondaEnCurso: true,
+            hasDrawn: false
         };
+    }
+    
+    function iniciarJuego(estado) {
+        myHand = estado.hands[myId] || [];
+        deck = estado.deck;
+        discardPile = estado.discardPile;
+        currentTurn = estado.currentTurn;
+        myPoints = estado.points[myId] || 0;
+        rondaEnCurso = estado.rondaEnCurso;
+        hasDrawn = estado.hasDrawn || false;
+        gameActive = true;
+        selectedCardIndex = null;
         
-        joinGameBtn.onclick = () => {
-            let code = roomCodeInput.value.trim();
-            if(code.length !== 6) { alert("Código de 6 dígitos"); return; }
-            
-            myId = generarId();
-            roomId = code;
-            isHost = false;
-            
-            gameRef = database.ref('games/' + roomId);
-            gameRef.once('value', (snap) => {
-                let data = snap.val();
-                if(!data) { alert("Sala no encontrada"); return; }
-                if(data.status === 'playing') { alert("La partida ya comenzó"); return; }
-                
-                let newPlayers = [...(data.players || []), { id: myId, name: "Jugador", points: 0 }];
-                gameRef.update({ players: newPlayers });
-                
-                gameRef.on('value', (snap) => {
-                    let newData = snap.val();
-                    if(newData) {
-                        players = newData.players || [];
-                        actualizarLista();
-                        if(newData.status === 'playing' && newData.gameState) {
-                            iniciarJuego(newData.gameState);
-                        }
-                    }
-                });
-                mostrarLobby(false);
-            });
+        otherPlayers = players.filter(p => p.id !== myId).map(p => ({
+            id: p.id,
+            name: p.name,
+            points: estado.points[p.id] || 0,
+            handCount: estado.hands[p.id]?.length || 7
+        }));
+        
+        menuScreen.classList.add("hidden");
+        lobbyScreen.classList.add("hidden");
+        gameScreen.classList.remove("hidden");
+        actualizarUIJuego();
+        
+        gameRef.child('gameState').on('value', (snap) => {
+            let nuevo = snap.val();
+            if(nuevo) actualizarDesdeEstado(nuevo);
+        });
+    }
+    
+    function actualizarDesdeEstado(nuevo) {
+        deck = nuevo.deck;
+        discardPile = nuevo.discardPile;
+        currentTurn = nuevo.currentTurn;
+        rondaEnCurso = nuevo.rondaEnCurso;
+        hasDrawn = nuevo.hasDrawn || false;
+        if(nuevo.hands && nuevo.hands[myId]) myHand = nuevo.hands[myId];
+        if(nuevo.points) {
+            myPoints = nuevo.points[myId] || 0;
+            otherPlayers = otherPlayers.map(p => ({ ...p, points: nuevo.points[p.id] || 0 }));
+        }
+        if(nuevo.winner) {
+            let ganador = players.find(p => p.id === nuevo.winner)?.name || "Alguien";
+            addLog(`🏆 ${ganador} cerró la ronda!`);
+            setTimeout(() => {
+                if(isHost) gameRef.update({ gameState: crearEstadoInicial() });
+            }, 3000);
+        }
+        actualizarUIJuego();
+    }
+    
+    // Eventos
+    mazoBtn.onclick = () => {
+        if(currentTurn === myId && gameActive && rondaEnCurso) {
+            if(!hasDrawn) robarMazo();
+            else if(hasDrawn && selectedCardIndex !== null) cerrar();
+        }
+    };
+    descarteBtn.onclick = () => {
+        if(currentTurn === myId && gameActive && rondaEnCurso) {
+            if(!hasDrawn) robarDescarte();
+            else if(hasDrawn && selectedCardIndex !== null) descartar();
+        }
+    };
+    closeRoundBtn.onclick = cerrar;
+    lobbyBackBtn.onclick = () => window.location.reload();
+    
+    // Cargar imagen
+    function cargarImagen() {
+        const img = new Image();
+        img.onload = () => {
+            SPRITE_URL = IMAGE_FILENAME;
+            connectionStatus.innerHTML = "✅ Listo!";
         };
-        
-        function actualizarLista() {
-            playersList.innerHTML = players.map(p => `<li>${p.name} ${p.id === myId ? '(tú)' : ''} ${p.id === players[0]?.id ? '👑' : ''}</li>`).join('');
-            
-            if(isHost && players.length >= 2) {
-                startGameBtn.disabled = false;
-                startGameBtn.style.opacity = '1';
-                lobbyStatus.innerHTML = "✅ ¡Listo! Puedes empezar.";
-                lobbyStatus.className = "status status-ok";
-            } else if(isHost) {
-                startGameBtn.disabled = true;
-                startGameBtn.style.opacity = '0.5';
-                lobbyStatus.innerHTML = "⏳ Esperando jugadores (mínimo 2)";
-                lobbyStatus.className = "status status-wait";
-            }
-        }
-        
-        function mostrarLobby(host) {
-            menuScreen.classList.add("hidden");
-            lobbyScreen.classList.remove("hidden");
-            gameScreen.classList.add("hidden");
-            if(!host) {
-                startGameBtn.classList.add("hidden");
-                lobbyStatus.innerHTML = "Conectado. Esperando al anfitrión...";
-            } else {
-                startGameBtn.classList.remove("hidden");
-            }
-        }
-        
-        startGameBtn.onclick = () => {
-            if(isHost && players.length >= 2) {
-                let gameState = crearEstadoInicial();
-                gameRef.update({ status: 'playing', gameState: gameState });
-                iniciarJuego(gameState);
-            }
+        img.onerror = () => {
+            connectionStatus.innerHTML = "⚠️ Imagen no encontrada";
         };
-        
-        function crearEstadoInicial() {
-            let baraja = mezclar(crearBaraja());
-            let mazo = [...baraja];
-            let descartes = [mazo.pop()];
-            let manos = {};
-            for(let p of players) {
-                let mano = [];
-                for(let i=0; i<7; i++) mano.push(mazo.pop());
-                manos[p.id] = mano;
-            }
-            return {
-                deck: mazo,
-                discardPile: descartes,
-                hands: manos,
-                currentTurn: players[0].id,
-                points: Object.fromEntries(players.map(p => [p.id, 0])),
-                rondaEnCurso: true,
-                hasDrawn: false
-            };
-        }
-        
-        function iniciarJuego(estado) {
-            myHand = estado.hands[myId] || [];
-            deck = estado.deck;
-            discardPile = estado.discardPile;
-            currentTurn = estado.currentTurn;
-            myPointsValue = estado.points[myId] || 0;
-            rondaEnCurso = estado.rondaEnCurso;
-            hasDrawn = estado.hasDrawn || false;
-            gameActive = true;
-            selectedCard = null;
-            
-            otherPlayers = players.filter(p => p.id !== myId).map(p => ({
-                id: p.id,
-                name: p.name,
-                points: estado.points[p.id] || 0,
-                handCount: estado.hands[p.id]?.length || 7
-            }));
-            
-            menuScreen.classList.add("hidden");
-            lobbyScreen.classList.add("hidden");
-            gameScreen.classList.remove("hidden");
-            actualizarUIJuego();
-            
-            gameRef.child('gameState').on('value', (snap) => {
-                let nuevo = snap.val();
-                if(nuevo) actualizarDesdeEstado(nuevo);
-            });
-        }
-        
-        function actualizarDesdeEstado(nuevo) {
-            deck = nuevo.deck;
-            discardPile = nuevo.discardPile;
-            currentTurn = nuevo.currentTurn;
-            rondaEnCurso = nuevo.rondaEnCurso;
-            hasDrawn = nuevo.hasDrawn || false;
-            if(nuevo.hands && nuevo.hands[myId]) myHand = nuevo.hands[myId];
-            if(nuevo.points) {
-                myPointsValue = nuevo.points[myId] || 0;
-                otherPlayers = otherPlayers.map(p => ({
-                    ...p,
-                    points: nuevo.points[p.id] || 0
-                }));
-            }
-            if(nuevo.winner) {
-                let ganador = players.find(p => p.id === nuevo.winner)?.name || "Alguien";
-                addLog(`🏆 ${ganador} cerró la ronda!`);
-                setTimeout(() => {
-                    if(isHost) gameRef.update({ gameState: crearEstadoInicial() });
-                }, 3000);
-            }
-            actualizarUIJuego();
-        }
-        
-        // Eventos
-        mazoBtn.onclick = () => {
-            if(currentTurn === myId && gameActive && rondaEnCurso) {
-                if(!hasDrawn) robarMazo();
-                else if(hasDrawn && selectedCard !== null) cerrar();
-            }
-        };
-        descarteBtn.onclick = () => {
-            if(currentTurn === myId && gameActive && rondaEnCurso) {
-                if(!hasDrawn) robarDescarte();
-                else if(hasDrawn && selectedCard !== null) descartar();
-            }
-        };
-        closeBtn.onclick = cerrar;
-        
-        lobbyBackBtn.onclick = () => window.location.reload();
-        gameBackBtn.onclick = () => window.location.reload();
-        
-        // Cargar imagen
-        function cargarImagen() {
-            const img = new Image();
-            img.onload = () => { SPRITE_URL = IMAGE_FILE; connectionStatus.innerHTML = "✅ Listo!"; };
-            img.onerror = () => { SPRITE_URL = null; connectionStatus.innerHTML = "⚠️ Imagen no encontrada"; };
-            img.src = IMAGE_FILE;
-        }
-        cargarImagen();
-        connectionStatus.innerHTML = "📡 Conectando a Firebase...";
-    </script>
+        img.src = IMAGE_FILENAME;
+    }
+    cargarImagen();
+    connectionStatus.innerHTML = "📡 Conectando a Firebase...";
+</script>
 </body>
 </html>
