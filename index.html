@@ -277,35 +277,32 @@ const firebaseConfig = {
     let imageUrl = null;
     
     // Función para obtener el fondo de una carta
-    function getCardBackground(card) {
-        if (!imageUrl || !card) return "background: #4a3727;";
-        
-        let row, col;
-        if (card.comodin) {
-            // Comodín: fila 4, columna 0
-            row = 4;
-            col = 0;
-        } else {
-            row = PALO_FILA[card.palo];
-            col = card.numero - 1; // las cartas van del 1 al 12, columna 0 = 1
-        }
-        
-        const x = col * CARD_W;
-        const y = row * CARD_H;
-        const scale = 0.385; // Ajustado para que quepa bien en móvil
-        
-        return `background-image: url('${imageUrl}'); background-position: -${x * scale}px -${y * scale}px; background-size: ${SPRITE_W * scale}px ${SPRITE_H * scale}px; background-repeat: no-repeat; background-color: white;`;
+function getCardBackground(card) {
+    if (!imageUrl || !card) return "background: #4a3727;";
+    
+    let row, col;
+    if (card.comodin) {
+        row = 4;
+        col = 0;
+    } else {
+        row = PALO_FILA[card.palo];
+        col = card.numero - 1;
     }
     
-    function getBackBackground() {
-        if (!imageUrl) return "background: #4a3727;";
-        // Dorso: fila 4, columna 1
-        const x = 1 * CARD_W;
-        const y = 4 * CARD_H;
-        const scale = 0.385;
-        return `background-image: url('${imageUrl}'); background-position: -${x * scale}px -${y * scale}px; background-size: ${SPRITE_W * scale}px ${SPRITE_H * scale}px; background-repeat: no-repeat; background-color: #2c1a10;`;
-    }
+    // Coordenadas exactas en píxeles
+    const x = col * CARD_W;
+    const y = row * CARD_H;
     
+    // Usar tamaño original sin escalar, el CSS va a ajustar
+    return `background-image: url('${imageUrl}'); background-position: -${x}px -${y}px; background-size: ${SPRITE_W}px ${SPRITE_H}px; background-repeat: no-repeat; background-color: white; width: ${CARD_W / 2}px; height: ${CARD_H / 2}px; background-size: ${SPRITE_W / 2}px ${SPRITE_H / 2}px;`;
+}
+
+function getBackBackground() {
+    if (!imageUrl) return "background: #4a3727;";
+    const x = 1 * CARD_W;
+    const y = 4 * CARD_H;
+    return `background-image: url('${imageUrl}'); background-position: -${x / 2}px -${y / 2}px; background-size: ${SPRITE_W / 2}px ${SPRITE_H / 2}px; background-repeat: no-repeat; background-color: #2c1a10; width: ${CARD_W / 2}px; height: ${CARD_H / 2}px;`;
+}
     // ============================================================
     // LÓGICA DEL JUEGO
     // ============================================================
