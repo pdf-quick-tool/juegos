@@ -210,24 +210,42 @@
     // 🃏 IMAGEN DE LA BARAJA
     // ============================================================
     const IMAGE_FILE = "Baraja_española_completa.png";
-    const CARD_W = 208, CARD_H = 319, SPRITE_W = 2496, SPRITE_H = 1595;
+const CARD_W = 208, CARD_H = 319; 
+const SPRITE_W = 2496, SPRITE_H = 1595;
     const PALO_FILA = { "oros": 0, "copas": 1, "espadas": 2, "bastos": 3 };
     let SPRITE_URL = null;
     
-    function cardBG(carta) {
-        if (!SPRITE_URL) return "background: #4a3727;";
-        let fila, col;
-        if (carta.comodin) { fila = 4; col = 0; }
-        else { fila = PALO_FILA[carta.palo]; col = carta.numero - 1; }
-        const x = col * CARD_W, y = fila * CARD_H, s = 0.48;
-        return `background-image: url('${SPRITE_URL}'); background-position: -${x * s}px -${y * s}px; background-size: ${SPRITE_W * s}px ${SPRITE_H * s}px; background-repeat: no-repeat;`;
+function cardBG(carta) {
+    if (!SPRITE_URL) return "background: #4a3727;";
+    let fila, col;
+    if (carta.comodin) { 
+        fila = 4; col = 0; 
+    } else { 
+        fila = PALO_FILA[carta.palo]; 
+        col = carta.numero - 1; 
     }
     
-    function dorso() {
-        if (!SPRITE_URL) return "background: #4a3727;";
-        const x = 1 * CARD_W, y = 4 * CARD_H, s = 0.48;
-        return `background-image: url('${SPRITE_URL}'); background-position: -${x * s}px -${y * s}px; background-size: ${SPRITE_W * s}px ${SPRITE_H * s}px; background-repeat: no-repeat;`;
-    }
+    // La imagen tiene 12 columnas y 5 filas
+    const xPercent = (col * 100) / 11; 
+    const yPercent = (fila * 100) / 4;  
+    
+    return `background-image: url('${SPRITE_URL}'); 
+            background-position: ${xPercent}% ${yPercent}%; 
+            background-size: 1200% 500%; 
+            background-repeat: no-repeat;`;
+}
+
+function dorso() {
+    if (!SPRITE_URL) return "background: #4a3727;";
+    // El dorso está en la fila 5, columna 2 (índice 4, 1)
+    const xPercent = (1 * 100) / 11;
+    const yPercent = (4 * 100) / 4;
+    return `background-image: url('${SPRITE_URL}'); 
+            background-position: ${xPercent}% ${yPercent}%; 
+            background-size: 1200% 500%; 
+            background-repeat: no-repeat;`;
+}
+
 
     // ============================================================
     // 🎮 LÓGICA DEL JUEGO
@@ -550,11 +568,9 @@
             let mazo = [...baraja];
             let desc = [mazo.pop()];
             let manos = {};
-            for(let p of players) {
-                let mano = [];
-                for(let i=0; i<7; i++) mano.push(mazo.pop());
-                manos[p.id] = mano;
-            }
+            players.forEach(p => {
+                manos[p.id] = mazo.splice(0, 7); // Repartir 7 a cada uno
+            });
             let estado = {
                 deck: mazo,
                 discardPile: desc,
@@ -601,8 +617,9 @@
                 currentTurn = nuevo.currentTurn;
                 rondaEnCurso = nuevo.rondaEnCurso;
                 hasDrawn = nuevo.hasDrawn || false;
-                
-                if(nuevo.hands && nuevo.hands[myId]) myHand = nuevo.hands[myId];
+                if(nuevo.hands && nuevo.hands[myId]) {
+                    myHand = Object.values(nuevo.hands[myId]); // Esto garantiza que sea iterable
+                }
                 if(nuevo.points) {
                     myPoints = nuevo.points[myId] || 0;
                     // Actualizar puntos de los demás también
