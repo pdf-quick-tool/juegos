@@ -480,59 +480,43 @@ function robarMazo() {
     hasDrawn = true;
     
     let actualizaciones = {};
-    // Quitamos "gameState/" de la llave porque ya vamos a actualizar sobre el nodo de la partida
+    // ESTO ES LO QUE FALTABA: Subir tu mano cada vez que robás
     actualizaciones[`gameState/hands/${myId}`] = myHand;
     actualizaciones[`gameState/deck`] = deck;
     actualizaciones[`gameState/hasDrawn`] = true;
     
     gameRef.update(actualizaciones);
-    // No hace falta llamar a actualizarJuego() acá porque el listener .on("value") lo hará por vos
 }
+
 function robarDescarte() {
     if(!gameActive || !rondaEnCurso || currentTurn !== myId || hasDrawn || discardPile.length === 0) return;
-    
+    playSfx('carta');
     let carta = discardPile.pop();
     myHand.push(carta);
     hasDrawn = true;
     addLog("Robaste del descarte");
 
     let actualizaciones = {};
+    // ESTO ES LO QUE FALTABA: Subir tu mano cada vez que robás del descarte
     actualizaciones[`gameState/hands/${myId}`] = myHand;
     actualizaciones[`gameState/discardPile`] = discardPile;
     actualizaciones[`gameState/hasDrawn`] = true;
     
     gameRef.update(actualizaciones);
 }
-function obtenerSiguienteVivo(actualId) {
-    let idx = players.findIndex(p => p.id === actualId);
-    let total = players.length;
-    
-    for (let i = 1; i <= total; i++) {
-        let siguiente = players[(idx + i) % total];
-        // Si no existe gameConfig o maxPts, usamos 100 por defecto
-        let limite = (typeof gameConfig !== 'undefined' && gameConfig.maxPts) ? gameConfig.maxPts : 100;
-        
-        // El turno pasa solo si el jugador tiene menos del puntaje límite
-        if ((siguiente.points || 0) < limite) {
-            return siguiente.id;
-        }
-    }
-    return actualId; 
-}
+
 function descartar() {
     if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCard === null) return;
-    
     playSfx('carta');
+    
     let nombreYo = myName || (isHost ? "Anfitrión" : "Jugador"); 
-    addLog(`🎴 ${nombreYo} descartó`);
-
     let carta = myHand.splice(selectedCard, 1)[0];
     discardPile.push(carta);
     
-    // USAMOS LA NUEVA LÓGICA AQUÍ:
     let next = obtenerSiguienteVivo(myId);
 
     let actualizaciones = {};
+    // ESTO ES LO QUE FALTABA: Subir tu mano actualizada (con una carta menos)
     actualizaciones[`gameState/hands/${myId}`] = myHand;
     actualizaciones[`gameState/discardPile`] = discardPile;
     actualizaciones[`gameState/currentTurn`] = next;
@@ -540,10 +524,11 @@ function descartar() {
     
     selectedCard = null;
     hasDrawn = false;
+    addLog(`${nombreYo} descartó`);
     
     gameRef.update(actualizaciones);
-    actualizarJuego();
 }
+
 
 function abandonarPartida() {
     if (confirm("¿Estás seguro de que querés salir de la partida?")) {
@@ -573,27 +558,29 @@ function cerrar() {
         addLog("✨ ¡Cerraste la ronda! ✨");
         
         let nuevosPuntos = {};
-        // Calculamos el puntaje del que cierra (el mejor posible descartando 1 de las 8)
         let miPuntajeRonda = calcularMejorPuntaje(myHand);
         
-        // 1. Calculamos puntos para todos los jugadores
+        // El Host o quien cierra calcula los puntos de todos basándose en Firebase
         players.forEach(p => {
             let ptsActuales = p.points || 0;
             let ptsRonda = 0;
 
             if (p.id === myId) {
-                ptsRonda = miPuntajeRonda; // Suma lo que le quedó suelto al cerrar
+                ptsRonda = miPuntajeRonda; 
             } else {
-                // Buscamos la mano de los oponentes que está en Firebase
-                // (Ojo: asegurate que players[i].mano se esté actualizando)
-                let suMano = (otherPlayers.find(op => op.id === p.id)?.mano || []);
+                // Buscamos la mano que el oponente tiene guardada en el servidor
+                let suMano = [];
+                if (ultimoEstadoGalactico && ultimoEstadoGalactico.hands && ultimoEstadoGalactico.hands[p.id]) {
+                    suMano = Array.isArray(ultimoEstadoGalactico.hands[p.id]) 
+                             ? ultimoEstadoGalactico.hands[p.id] 
+                             : Object.values(ultimoEstadoGalactico.hands[p.id]);
+                }
                 ptsRonda = puntosSueltas(suMano); 
             }
             
             nuevosPuntos[p.id] = ptsActuales + ptsRonda;
         });
 
-        // 2. Actualizamos Firebase
         let actualizaciones = {};
         actualizaciones[`gameState/hands/${myId}`] = myHand;
         actualizaciones[`gameState/rondaEnCurso`] = false;
@@ -605,6 +592,7 @@ function cerrar() {
         addLog("❌ No puedes cerrar");
     }
 }
+
 
 
 
@@ -836,13 +824,27 @@ window.addEventListener('load', () => {
 
     let lastRoom = localStorage.getItem("chinchon_roomId");
     if (lastRoom) {
-        document.getElementById("roomCode").value = lastRoom;
-        // Recuperamos si era host
+        roomId = lastRoom;
         isHost = localStorage.getItem("esAnfitrion") === "true";
         
-        statusMsg.innerHTML = `⚠️ Partida detectada. Dale a 'Unirse' para volver.`;
+        // Conectamos a la sala automáticamente
+        gameRef = db.ref("games/" + roomId);
+        gameRef.once("value", (snap) => {
+            if(snap.exists()) {
+                // Si la partida ya empezó, el listener de abajo nos meterá al juego
+                gameRef.on("value", (snap) => {
+                    let data = snap.val();
+                    if(data) {
+                        players = data.players || [];
+                        if(data.status === "playing" && data.gameState) iniciarJuego(data.gameState);
+                        else mostrarLobby(isHost);
+                    }
+                });
+            }
+        });
     }
 });
+
 
 
 
