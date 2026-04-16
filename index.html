@@ -504,6 +504,22 @@ function robarDescarte() {
     
     gameRef.update(actualizaciones);
 }
+function obtenerSiguienteVivo(actualId) {
+    let idx = players.findIndex(p => p.id === actualId);
+    let total = players.length;
+    
+    for (let i = 1; i <= total; i++) {
+        let siguiente = players[(idx + i) % total];
+        // Si todavía no configuraste el Lobby, usamos 100 por defecto
+        let limite = 100; 
+        
+        // Verificamos si el jugador sigue en juego (menos de 100 pts)
+        if ((siguiente.points || 0) < limite) {
+            return siguiente.id;
+        }
+    }
+    return actualId; 
+}
 
 function descartar() {
     if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCard === null) return;
@@ -732,7 +748,7 @@ document.getElementById("createBtn").onclick = () => {
     };
     
 function iniciarJuego(estado) {
-    // Carga inicial
+    // 1. Carga inicial de variables
     myHand = (estado.hands && estado.hands[myId]) ? estado.hands[myId] : [];
     deck = estado.deck || [];
     discardPile = estado.discardPile || [];
@@ -744,7 +760,6 @@ function iniciarJuego(estado) {
     gameActive = true;
     selectedCard = null;
     
-    // Actualizar oponentes
     otherPlayers = players.filter(p => p.id !== myId).map(p => ({
         id: p.id, name: p.name, points: (estado.points && estado.points[p.id]) || 0
     }));
@@ -754,19 +769,19 @@ function iniciarJuego(estado) {
     gameScreen.classList.remove("hidden");
     actualizarJuego();
     
-    // Listener en tiempo real
+    // 2. Listener en tiempo real
     gameRef.child("gameState").on("value", (snap) => {
         let nuevo = snap.val();
         if(nuevo) {
-            // 1. Sonido de turno (comparar antes de actualizar currentTurn global)
+            ultimoEstadoGalactico = nuevo; // Guardamos para calcular puntos luego
+
             if (nuevo.currentTurn === myId && currentTurn !== myId) {
                 playSfx('turno');
             }
 
-            // 2. Actualizar variables globales
+            let anteriorRonda = rondaEnCurso; 
             deck = nuevo.deck || [];
             discardPile = nuevo.discardPile || [];
-            let anteriorRonda = rondaEnCurso; // Para detectar el cierre
             rondaEnCurso = nuevo.rondaEnCurso;
             currentTurn = nuevo.currentTurn;
             hasDrawn = nuevo.hasDrawn || false;
@@ -782,14 +797,23 @@ function iniciarJuego(estado) {
                 });
             }
 
-            // 3. Lógica de Ganador y Sonidos de fin de ronda
+            // 3. DETECTAR CIERRE DE RONDA Y MOSTRAR PUNTOS
             if(nuevo.winner && anteriorRonda === true && rondaEnCurso === false) {
                 if(nuevo.winner === myId) playSfx('ganar');
                 else playSfx('perder');
                 
                 let ganador = players.find(p => p.id === nuevo.winner);
                 addLog(`🏆 ${ganador ? ganador.name : "Alguien"} cerró la ronda!`);
-                
+
+                // --- CARTEL DE RESULTADOS ---
+                let resumen = "📊 RESULTADOS DE LA RONDA:\n\n";
+                players.forEach(p => {
+                    let manoJugador = nuevo.hands ? (nuevo.hands[p.id] || []) : [];
+                    let ptsGanados = (p.id === nuevo.winner) ? calcularMejorPuntaje(manoJugador) : puntosSueltas(manoJugador);
+                    resumen += `${p.name}: +${ptsGanados} pts (Total: ${nuevo.points[p.id]})\n`;
+                });
+                alert(resumen); 
+
                 setTimeout(() => { 
                     if(isHost) gameRef.update({ gameState: null, status: "waiting" }); 
                 }, 3000);
