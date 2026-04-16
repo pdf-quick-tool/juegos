@@ -120,17 +120,18 @@
             max-height: 70px;
             overflow-y: auto;
         }
-        .turno {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ffd966;
-            padding: 10px 20px;
-            border-radius: 40px;
-            font-weight: bold;
-            white-space: nowrap;
-        }
+.turno {
+    /* Ya no es fixed al fondo */
+    position: relative; 
+    margin: 10px auto;
+    width: fit-content;
+    padding: 8px 25px;
+    border-radius: 20px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    z-index: 10;
+}
         .turno.mio { background: #4caf50; color: white; animation: pulse 1s infinite; }
         @keyframes pulse {
             0% { opacity: 0.7; transform: translateX(-50%) scale(1); }
@@ -230,19 +231,24 @@ const SPRITE_W = 2496, SPRITE_H = 1595;
 function cardBG(carta) {
     if (!SPRITE_URL) return "background: #4a3727;";
     let fila, col;
-    if (carta.comodin) { fila = 4; col = 0; }
-    else { fila = PALO_FILA[carta.palo]; col = carta.numero - 1; }
+    if (carta.comodin) { 
+        fila = 4; col = 0; 
+    } else { 
+        fila = PALO_FILA[carta.palo]; 
+        col = carta.numero - 1; 
+    }
     
-    // 80px es el ancho que pusimos en el CSS
-    const s = 80 / 208; 
-    const x = col * 208 * s;
-    const y = fila * 319 * s;
+    // La imagen tiene 12 columnas (0 a 11) y 5 filas (0 a 4)
+    // Usamos porcentajes exactos para que el navegador recorte bien en cualquier zoom
+    const xPercent = (col * 100) / 11; 
+    const yPercent = (fila * 100) / 4;  
     
     return `background-image: url('${SPRITE_URL}'); 
-            background-position: -${x}px -${y}px; 
-            background-size: ${2496 * s}px ${1595 * s}px; 
+            background-position: ${xPercent}% ${yPercent}%; 
+            background-size: 1200% 500%; 
             background-repeat: no-repeat;`;
 }
+
 
 
 function dorso() {
