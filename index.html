@@ -82,15 +82,7 @@
             background: rgba(0,0,0,0.3);
             border-radius: 50px;
         }
-        .card-pile {
-            width: 85px;
-            height: 130px;
-            background: #2c1a10;
-            border-radius: 10px;
-            border: 2px solid #ffd966;
-            cursor: pointer;
-            background-size: cover !important;
-        }
+
         .my-hand {
             display: flex;
             gap: 8px;
@@ -98,14 +90,22 @@
             flex-wrap: wrap;
             margin-top: 10px;
         }
+        .card-pile {
+            width: 80px; 
+            height: 123px; /* Proporción corregida */
+            background: #2c1a10;
+            border-radius: 10px;
+            border: 2px solid #ffd966;
+            cursor: pointer;
+        }
+
         .carta {
-            width: 75px;
-            height: 115px;
+            width: 80px; 
+            height: 123px; /* Proporción corregida */
             border-radius: 8px;
             cursor: pointer;
             transition: 0.1s;
             box-shadow: 0 4px 8px black;
-            background-size: cover !important;
         }
         .carta.selected { transform: translateY(-12px); filter: drop-shadow(0 0 8px gold); }
         .game-buttons { display: flex; gap: 10px; justify-content: center; margin: 15px 0; }
@@ -218,22 +218,20 @@ const SPRITE_W = 2496, SPRITE_H = 1595;
 function cardBG(carta) {
     if (!SPRITE_URL) return "background: #4a3727;";
     let fila, col;
-    if (carta.comodin) { 
-        fila = 4; col = 0; 
-    } else { 
-        fila = PALO_FILA[carta.palo]; 
-        col = carta.numero - 1; 
-    }
+    if (carta.comodin) { fila = 4; col = 0; }
+    else { fila = PALO_FILA[carta.palo]; col = carta.numero - 1; }
     
-    // La imagen tiene 12 columnas y 5 filas
-    const xPercent = (col * 100) / 11; 
-    const yPercent = (fila * 100) / 4;  
+    // 80px es el ancho que pusimos en el CSS
+    const s = 80 / 208; 
+    const x = col * 208 * s;
+    const y = fila * 319 * s;
     
     return `background-image: url('${SPRITE_URL}'); 
-            background-position: ${xPercent}% ${yPercent}%; 
-            background-size: 1200% 500%; 
+            background-position: -${x}px -${y}px; 
+            background-size: ${2496 * s}px ${1595 * s}px; 
             background-repeat: no-repeat;`;
 }
+
 
 function dorso() {
     if (!SPRITE_URL) return "background: #4a3727;";
@@ -440,50 +438,87 @@ function dorso() {
         closeBtn.disabled = !(gameActive && rondaEnCurso && currentTurn === myId && hasDrawn);
     }
     
-    function robarMazo() {
-        if(!gameActive || !rondaEnCurso || currentTurn !== myId || hasDrawn || deck.length === 0) return;
-        let carta = deck.pop();
-        myHand.push(carta);
-        hasDrawn = true;
-        addLog("Robaste del mazo");
-        gameRef.child("gameState").update({ deck: deck, hands: { [myId]: myHand }, hasDrawn: true });
-        actualizarJuego();
-    }
+function robarMazo() {
+    if(!gameActive || !rondaEnCurso || currentTurn !== myId || hasDrawn || deck.length === 0) return;
+    let carta = deck.pop();
+    myHand.push(carta);
+    hasDrawn = true;
     
-    function robarDescarte() {
-        if(!gameActive || !rondaEnCurso || currentTurn !== myId || hasDrawn || discardPile.length === 0) return;
-        let carta = discardPile.pop();
-        myHand.push(carta);
-        hasDrawn = true;
-        addLog("Robaste del descarte");
-        gameRef.child("gameState").update({ discardPile: discardPile, hands: { [myId]: myHand }, hasDrawn: true });
-        actualizarJuego();
-    }
+    // USAR RUTA ESPECÍFICA PARA NO BORRAR A OTROS
+    let actualizaciones = {};
+    actualizaciones[`gameState/hands/${myId}`] = myHand;
+    actualizaciones[`gameState/deck`] = deck;
+    actualizaciones[`gameState/hasDrawn`] = true;
+    gameRef.update(actualizaciones);
+}
     
-    function descartar() {
-        if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCard === null) return;
-        let carta = myHand.splice(selectedCard, 1)[0];
-        discardPile.push(carta);
-        selectedCard = null;
-        hasDrawn = false;
-        addLog("Descartaste");
-        let all = [...otherPlayers, { id: myId }];
-        let idx = all.findIndex(p => p.id === currentTurn);
-        let next = all[(idx + 1) % all.length].id;
-        gameRef.child("gameState").update({ hands: { [myId]: myHand }, discardPile: discardPile, currentTurn: next, hasDrawn: false });
-        actualizarJuego();
-    }
+function descartar() {
+    if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCard === null) return;
+    let carta = myHand.splice(selectedCard, 1)[0];
+    discardPile.push(carta);
     
-    function cerrar() {
-        if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn) return;
-        if(puedeCerrar(myHand)) {
-            addLog("✨ ¡Cerraste la ronda! ✨");
-            gameRef.child("gameState").update({ rondaEnCurso: false, winner: myId });
-        } else {
-            addLog("❌ No puedes cerrar");
-        }
-    }
+    let all = [...otherPlayers, { id: myId }];
+    let idx = all.findIndex(p => p.id === currentTurn);
+    let next = all[(idx + 1) % all.length].id;
+
+    // USAR RUTA ESPECÍFICA
+    let actualizaciones = {};
+    actualizaciones[`gameState/hands/${myId}`] = myHand;
+    actualizaciones[`gameState/discardPile`] = discardPile;
+    actualizaciones[`gameState/currentTurn`] = next;
+    actualizaciones[`gameState/hasDrawn`] = false;
     
+    selectedCard = null;
+    hasDrawn = false;
+    gameRef.update(actualizaciones);
+}
+    
+function descartar() {
+    if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn || selectedCard === null) return;
+    
+    let carta = myHand.splice(selectedCard, 1)[0];
+    discardPile.push(carta);
+    
+    let all = players; // Usamos la lista global de jugadores
+    let idx = all.findIndex(p => p.id === myId);
+    let next = all[(idx + 1) % all.length].id;
+
+    // Actualizamos por separado para no sobreescribir todo el objeto hands
+    gameRef.child("gameState/hands/" + myId).set(myHand);
+    gameRef.child("gameState").update({ 
+        discardPile: discardPile, 
+        currentTurn: next, 
+        hasDrawn: false 
+    });
+
+    selectedCard = null;
+    hasDrawn = false;
+    addLog("Descartaste");
+    actualizarJuego();
+}
+
+function cerrar() {
+    if(!gameActive || !rondaEnCurso || currentTurn !== myId || !hasDrawn) return;
+    
+    if(puedeCerrar(myHand)) {
+        addLog("✨ ¡Cerraste la ronda! ✨");
+        
+        // Es mejor actualizar la mano final antes de cerrar 
+        // por si hubo un cambio de último segundo
+        let actualizaciones = {
+            rondaEnCurso: false,
+            winner: myId
+        };
+        
+        // Guardamos tu mano ganadora y cerramos la ronda
+        gameRef.child("gameState/hands/" + myId).set(myHand);
+        gameRef.child("gameState").update(actualizaciones);
+        
+    } else {
+        addLog("❌ No puedes cerrar (necesitas menos de 5 pts)");
+    }
+}
+
     // ========== SALAS ==========
     document.getElementById("createBtn").onclick = () => {
         myId = generarId();
