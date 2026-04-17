@@ -159,10 +159,34 @@
 
     <!-- Pantalla sala (Lobby) -->
     <div id="lobbyScreen" class="screen hidden">
+        <div id="hostConfig" class="hidden" style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 20px; margin: 10px 0; text-align: left; font-size: 0.9rem;">
+    <h3 style="margin-top:0; color: #2c5a2a;">⚙️ Configuración</h3>
+    
+    <label>Puntos Máximos: 
+        <select id="maxPtsInput" style="width: auto; padding: 5px;">
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+        </select>
+    </label><br><br>
+    
+    <label>Comodines: 
+        <input type="number" id="comodinesInput" value="2" min="0" max="4" style="width: 40px; padding: 5px;">
+    </label><br><br>
+    
+    <label>Se cierra con: 
+        <select id="cierreInput" style="width: auto; padding: 5px;">
+            <option value="10">10 puntos o menos</option>
+            <option value="5" selected>5 puntos o menos</option>
+            <option value="0">Solo 0 puntos</option>
+        </select>
+    </label>
+</div>
         <h1>Sala</h1>
         <div class="code-box" id="codeDisplay">----</div>
         <ul class="players-list" id="playersList"></ul>
         <button class="btn-green" id="startGameBtn">🎮 Empezar</button>
+        <button id="resetTournamentBtn" class="hidden" style="background: #2196F3; color: white; width: 100%; margin-top: 10px;">🔄 Reiniciar Torneo (Puntos a 0)</button>
         <button id="abandonBtn" style="background: #f44336; color: white; width: 100%;">🚪 Abandonar Sala</button>
         <div class="status status-wait" id="lobbyStatus">Esperando jugadores...</div>
     </div>
@@ -287,77 +311,122 @@ function dorso() {
     function mezclar(a) { for(let i=a.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
     function valorCarta(c) { if(c.comodin) return 0; if(c.numero >= 10) return 10; return c.numero; }
     
-    function puntosSueltas(mano) {
-        if(mano.length === 0) return 0;
-        let usado = new Array(mano.length).fill(false);
-        let comodines = mano.map((c,i)=>c.comodin?i:-1).filter(i=>i!==-1);
-        let normales = mano.map((c,i)=>c.comodin?null:{idx:i,palo:c.palo,num:c.numero}).filter(c=>c);
-        let usadosComodin = 0;
-        
-        function buscarGrupo() {
-            for(let i=0; i<normales.length; i++) {
-                if(usado[normales[i].idx]) continue;
-                let grupo = [normales[i].idx];
-                for(let j=i+1; j<normales.length; j++) {
-                    if(!usado[normales[j].idx] && normales[j].num === normales[i].num && mano[normales[j].idx].palo !== mano[normales[i].idx].palo) {
-                        if(grupo.length < 4 && !grupo.some(idx=>mano[idx].palo===mano[normales[j].idx].palo)) grupo.push(normales[j].idx);
+function puntosSueltas(mano) {
+    if (!mano || mano.length === 0) return 0;
+
+    const normales = mano.filter(c => !c.comodin);
+    const cantComodines = mano.filter(c => c.comodin).length;
+
+    // Función principal que prueba todas las rutas
+    function resolver(cartas, comodines) {
+        if (cartas.length === 0) return 0;
+
+        let mejorPuntaje = calcularSuma(cartas);
+
+        // 1. Intentar buscar ESCALERAS
+        for (let i = 0; i < cartas.length; i++) {
+            for (let j = i + 1; j < cartas.length; j++) {
+                // Buscamos una tercera carta o usamos un comodín para completar 3
+                for (let k = j + 1; k <= cartas.length; k++) {
+                    let combo = [cartas[i], cartas[j]];
+                    let usados = 0;
+                    
+                    if (k < cartas.length) combo.push(cartas[k]);
+                    else if (comodines > 0) usados = 1;
+                    else continue;
+
+                    if (esEscaleraValida(combo, usados)) {
+                        let resto = filtrarCartas(cartas, combo);
+                        mejorPuntaje = Math.min(mejorPuntaje, resolver(resto, comodines - usados));
                     }
                 }
-                if(grupo.length >= 3) { grupo.forEach(idx=>usado[idx]=true); return true; }
-                if(grupo.length === 2 && usadosComodin < comodines.length) { grupo.forEach(idx=>usado[idx]=true); usado[comodines[usadosComodin++]] = true; return true; }
             }
-            return false;
         }
-        
-        function buscarEscalera() {
-            for(let palo of PALOS) {
-                let cartasPalo = [];
-                for(let idx=0; idx<normales.length; idx++) if(!usado[normales[idx].idx] && mano[normales[idx].idx].palo === palo) cartasPalo.push({idx:normales[idx].idx, num:normales[idx].num});
-                cartasPalo.sort((a,b)=>a.num-b.num);
-                let temp = [], mejor = [];
-                for(let i=0; i<cartasPalo.length; i++) {
-                    if(temp.length===0 || cartasPalo[i].num === temp[temp.length-1].num+1) temp.push(cartasPalo[i]);
-                    else { if(temp.length>=3) mejor.push(...temp); temp = [cartasPalo[i]]; }
+
+        // 2. Intentar buscar GRUPOS
+        for (let i = 0; i < cartas.length; i++) {
+            for (let j = i + 1; j < cartas.length; j++) {
+                let combo = [cartas[i], cartas[j]];
+                let usados = 0;
+                
+                // Probamos con una tercera carta o con un comodín
+                for (let k = j + 1; k <= cartas.length; k++) {
+                    let subCombo = [...combo];
+                    let subUsados = 0;
+                    if (k < cartas.length) subCombo.push(cartas[k]);
+                    else if (comodines > 0) subUsados = 1;
+                    else continue;
+
+                    if (esGrupoValido(subCombo, subUsados)) {
+                        let resto = filtrarCartas(cartas, subCombo);
+                        mejorPuntaje = Math.min(mejorPuntaje, resolver(resto, comodines - subUsados));
+                    }
                 }
-                if(temp.length>=3) mejor.push(...temp);
-                if(mejor.length>=3) { for(let item of mejor) usado[item.idx]=true; return true; }
-                if(mejor.length === 2 && usadosComodin < comodines.length) { for(let item of mejor) usado[item.idx]=true; usado[comodines[usadosComodin++]] = true; return true; }
             }
-            return false;
         }
-        
-        let cambio = true;
-        while(cambio) { cambio = buscarGrupo() || buscarEscalera(); }
-        let pts = 0;
-        for(let i=0; i<mano.length; i++) if(!usado[i]) pts += valorCarta(mano[i]);
-        return pts;
+
+        return mejorPuntaje;
     }
+
+    // Funciones auxiliares de validación
+    function esEscaleraValida(c, com) {
+        if (c.length + com < 3) return false;
+        let p = c[0].palo;
+        if (!c.every(item => item.palo === p)) return false;
+        let nums = c.map(item => item.numero).sort((a,b) => a-b);
+        // Validamos huecos con comodines
+        let huecos = 0;
+        for (let i = 0; i < nums.length - 1; i++) {
+            huecos += (nums[i+1] - nums[i] - 1);
+        }
+        return huecos <= com;
+    }
+
+    function esGrupoValido(c, com) {
+        if (c.length + com < 3) return false;
+        let n = c[0].numero;
+        let palos = new Set(c.map(item => item.palo));
+        return c.every(item => item.numero === n) && palos.size === c.length;
+    }
+
+    function filtrarCartas(todas, usadas) {
+        let resultado = [...todas];
+        usadas.forEach(u => {
+            let idx = resultado.findIndex(r => r.numero === u.numero && r.palo === u.palo);
+            if (idx !== -1) resultado.splice(idx, 1);
+        });
+        return resultado;
+    }
+
+    function calcularSuma(c) {
+        return c.reduce((acc, curr) => acc + valorCarta(curr), 0);
+    }
+
+    return resolver(normales, cantComodines);
+}
+
     
 function puedeCerrar(mano) {
-    // Si todavía no robaste (tenés 7 cartas), no podés cerrar la ronda
     if (mano.length < 8) return false;
 
-    // Traemos el límite que eligió el Host en el lobby (por defecto 5)
-    let limiteCierre = parseInt(document.getElementById("tipoCierre")?.value) || 5;
+    // Leemos la configuración que mandó el Host desde el estado global
+    let limite = (ultimoEstadoGalactico && ultimoEstadoGalactico.config) 
+                 ? ultimoEstadoGalactico.config.limiteCierre 
+                 : 5;
+
     let minimoPuntosPosibles = 999;
 
-    // PROBAMOS CADA CARTA COMO DESCARTE DE CIERRE
-    // (Simulamos tirar una carta y evaluamos las 7 que quedan)
     for (let i = 0; i < mano.length; i++) {
         let manoParaEvaluar = [...mano];
-        manoParaEvaluar.splice(i, 1); // Quitamos la carta 'i'
+        manoParaEvaluar.splice(i, 1); 
         
-        // Usamos tu función puntosSueltas para ver cuánto suman las 7 restantes
         let pts = puntosSueltas(manoParaEvaluar);
-        
         if (pts < minimoPuntosPosibles) {
             minimoPuntosPosibles = pts;
         }
     }
 
-    // Si encontramos al menos una forma de que las 7 cartas sumen 
-    // lo mismo o menos que el límite, el botón se habilita
-    return minimoPuntosPosibles <= limiteCierre;
+    return minimoPuntosPosibles <= limite;
 }
 
     // ============================================================
@@ -365,6 +434,7 @@ function puedeCerrar(mano) {
     // ============================================================
     
     // Recuperamos o generamos el ID único del dispositivo
+    let ultimoEstadoGalactico = null; 
     let myId = localStorage.getItem("chinchon_myId");
     if (!myId) {
         myId = 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
@@ -508,12 +578,15 @@ function obtenerSiguienteVivo(actualId) {
     let idx = players.findIndex(p => p.id === actualId);
     let total = players.length;
     
+    // Traemos el límite real de la configuración
+    let limite = (ultimoEstadoGalactico && ultimoEstadoGalactico.config) 
+                 ? ultimoEstadoGalactico.config.maxPts 
+                 : 100;
+
     for (let i = 1; i <= total; i++) {
         let siguiente = players[(idx + i) % total];
-        // Si todavía no configuraste el Lobby, usamos 100 por defecto
-        let limite = 100; 
         
-        // Verificamos si el jugador sigue en juego (menos de 100 pts)
+        // El turno solo pasa si el jugador tiene menos puntos que el límite (50, 100 o 200)
         if ((siguiente.points || 0) < limite) {
             return siguiente.id;
         }
@@ -608,7 +681,9 @@ function cerrar() {
         actualizaciones[`gameState/rondaEnCurso`] = false;
         actualizaciones[`gameState/winner`] = myId;
         actualizaciones[`gameState/points`] = nuevosPuntos;
-        
+        players.forEach((p, index) => {
+            actualizaciones[`players/${index}/points`] = nuevosPuntos[p.id];
+        }); 
         gameRef.update(actualizaciones);
     } else {
         addLog("❌ No puedes cerrar");
@@ -703,26 +778,59 @@ document.getElementById("createBtn").onclick = () => {
 
     };
     
-    function actualizarSala() {
-        if (roomId) {
-            document.getElementById("codeDisplay").innerText = roomId;
-        }
-    playersList.innerHTML = players.map(p => 
-        `<li>${p.name} ${p.id === myId ? "(tú)" : ""}: <b>${p.points || 0} pts</b></li>`
-    ).join("");
+function actualizarSala() {
+    // 1. Mantener el código de sala visible
+    if (roomId) {
+        document.getElementById("codeDisplay").innerText = roomId;
+    }
 
-    if(isHost && players.length >= 2) {
-        startGameBtn.disabled = false;
-        startGameBtn.style.opacity = "1";
-        lobbyStatus.innerHTML = "✅ Listo! Empezar";
-        lobbyStatus.className = "status status-ok";
-    } else if(isHost) {
-        startGameBtn.disabled = true;
-        startGameBtn.style.opacity = "0.5";
-        lobbyStatus.innerHTML = "⏳ Esperando jugadores (mínimo 2)";
-        lobbyStatus.className = "status status-wait";
+    // 2. Definir el límite de puntos (usamos el del Host o 100 por defecto)
+    let limite = (ultimoEstadoGalactico && ultimoEstadoGalactico.config) ? ultimoEstadoGalactico.config.maxPts : 100;
+    
+    // 3. Verificamos si alguien ya perdió (llegó o pasó el límite)
+    let hayPerdedor = players.some(p => (p.points || 0) >= limite);
+
+    // 4. Dibujar la lista con calaveras si alguien perdió
+    playersList.innerHTML = players.map(p => {
+        let pts = p.points || 0;
+        let perdio = pts >= limite;
+        return `<li>${perdio ? "💀" : "👤"} ${p.name} ${p.id === myId ? "(tú)" : ""}: <b>${pts} pts</b></li>`;
+    }).join("");
+
+    // 5. Lógica de botones para el Host
+    if(isHost) {
+        const resetBtn = document.getElementById("resetTournamentBtn");
+
+        if (hayPerdedor) {
+            // Si alguien perdió, bloqueamos el de Empezar y mostramos el de Reiniciar
+            startGameBtn.disabled = true;
+            startGameBtn.style.opacity = "0.5";
+            startGameBtn.innerText = "🏁 Partida Finalizada";
+            
+            if (resetBtn) resetBtn.classList.remove("hidden");
+            
+            lobbyStatus.innerHTML = "🏆 Alguien llegó al límite. ¡Reiniciá para jugar otra vez!";
+            lobbyStatus.className = "status status-wait";
+        } else {
+            // Si nadie perdió todavía, flujo normal
+            if (resetBtn) resetBtn.classList.add("hidden");
+            startGameBtn.innerText = "🎮 Empezar Ronda";
+            
+            if (players.length >= 2) {
+                startGameBtn.disabled = false;
+                startGameBtn.style.opacity = "1";
+                lobbyStatus.innerHTML = "✅ ¡Listo para la siguiente ronda!";
+                lobbyStatus.className = "status status-ok";
+            } else {
+                startGameBtn.disabled = true;
+                startGameBtn.style.opacity = "0.5";
+                lobbyStatus.innerHTML = "⏳ Esperando jugadores...";
+                lobbyStatus.className = "status status-wait";
+            }
+        }
     }
-    }
+}
+
     
     function mostrarLobby(host) {
         startScreen.classList.add("hidden");
@@ -734,21 +842,33 @@ document.getElementById("createBtn").onclick = () => {
         } else {
             startGameBtn.classList.remove("hidden");
         }
+        document.getElementById("hostConfig").classList.toggle("hidden", !host);
     }
     
 startGameBtn.onclick = () => {
     if(isHost && players.length >= 2) {
-        let baraja = mezclar(crearBaraja());
-        let mazo = [...baraja];
+        // 1. Capturamos configuración
+        const maxPts = parseInt(document.getElementById("maxPtsInput").value) || 100;
+        const cantComodines = parseInt(document.getElementById("comodinesInput").value) || 0;
+        const limiteCierre = parseInt(document.getElementById("cierreInput").value) || 5;
+
+        // 2. Creamos baraja
+        let baraja = [];
+        for(let p of PALOS) {
+            for(let n=1; n<=12; n++) baraja.push({ palo: p, numero: n, comodin: false });
+        }
+        for(let i=0; i<cantComodines; i++) baraja.push({ palo: "comodin", numero: 0, comodin: true });
+        
+        let mazo = mezclar(baraja);
         let desc = [mazo.pop()];
         let manos = {};
-        
-        // Creamos un objeto de puntos basado en los puntos que YA TIENEN los jugadores
-        let puntosParaLaRonda = {};
+        let puntosPersistentes = {};
+
+        // 3. Repartir y mantener puntos reales
         players.forEach(p => {
-            puntosParaLaRonda[p.id] = p.points || 0;
+            // Buscamos los puntos que ya están en el objeto players
+            puntosPersistentes[p.id] = p.points || 0;
             
-            // Repartimos 7 cartas
             let mano = [];
             for(let i=0; i<7; i++) mano.push(mazo.pop());
             manos[p.id] = mano;
@@ -758,17 +878,31 @@ startGameBtn.onclick = () => {
             deck: mazo,
             discardPile: desc,
             hands: manos,
-            currentTurn: players[0].id,
-            points: puntosParaLaRonda, // <--- ACÁ MANTENEMOS LOS PUNTOS
+            currentTurn: players[0].id, // Corregido: primer jugador de la lista
+            points: puntosPersistentes,
             rondaEnCurso: true,
-            hasDrawn: false
+            hasDrawn: false,
+            config: { maxPts, limiteCierre } 
         };
         
-        // Limpiamos acciones viejas y empezamos
         gameRef.update({ status: "playing", gameState: estado });
-        iniciarJuego(estado);
+        // No llamamos a iniciarJuego(estado) aquí, dejamos que el listener lo haga para todos
     }
 };
+
+const btnReset = document.getElementById("resetTournamentBtn");
+if (btnReset) {
+    btnReset.onclick = () => {
+        if (confirm("¿Reiniciar todos los puntos a 0 para empezar un nuevo torneo?")) {
+            let actualizaciones = {};
+            players.forEach((p, index) => {
+                actualizaciones[`players/${index}/points`] = 0;
+            });
+            actualizaciones["gameState"] = null;
+            gameRef.update(actualizaciones);
+        }
+    };
+}
 
     
 function iniciarJuego(estado) {
@@ -797,7 +931,7 @@ function iniciarJuego(estado) {
     gameRef.child("gameState").on("value", (snap) => {
         let nuevo = snap.val();
         if(nuevo) {
-            ultimoEstadoGalactico = nuevo; // Guardamos para calcular puntos luego
+            ultimoEstadoGalactico = nuevo; 
 
             if (nuevo.currentTurn === myId && currentTurn !== myId) {
                 playSfx('turno');
@@ -821,26 +955,52 @@ function iniciarJuego(estado) {
                 });
             }
 
-            // 3. DETECTAR CIERRE DE RONDA Y MOSTRAR PUNTOS
+            // 3. DETECTAR CIERRE DE RONDA, PUNTOS Y GANADOR FINAL
             if(nuevo.winner && anteriorRonda === true && rondaEnCurso === false) {
                 if(nuevo.winner === myId) playSfx('ganar');
                 else playSfx('perder');
                 
-                let ganador = players.find(p => p.id === nuevo.winner);
-                addLog(`🏆 ${ganador ? ganador.name : "Alguien"} cerró la ronda!`);
-
-                // --- CARTEL DE RESULTADOS ---
+                let limite = (nuevo.config && nuevo.config.maxPts) ? nuevo.config.maxPts : 100;
+                let alguienPerdioDefinitivamente = false;
                 let resumen = "📊 RESULTADOS DE LA RONDA:\n\n";
+                
                 players.forEach(p => {
                     let manoJugador = nuevo.hands ? (nuevo.hands[p.id] || []) : [];
                     let ptsGanados = (p.id === nuevo.winner) ? calcularMejorPuntaje(manoJugador) : puntosSueltas(manoJugador);
-                    resumen += `${p.name}: +${ptsGanados} pts (Total: ${nuevo.points[p.id]})\n`;
+                    
+                    // Actualizamos los puntos localmente para la lista del lobby
+                    p.points = nuevo.points[p.id]; 
+                    resumen += `${p.name}: +${ptsGanados} pts (Total: ${p.points})\n`;
+                    
+                    if (p.points >= limite) alguienPerdioDefinitivamente = true;
                 });
+                
                 alert(resumen); 
 
+                // Si alguien perdió, anunciamos al campeón absoluto
+                if (alguienPerdioDefinitivamente) {
+                    let ganadorFinal = players.reduce((prev, curr) => (prev.points < curr.points) ? prev : curr);
+                    alert(`🏆 ¡PARTIDA TERMINADA! 🏆\nEl campeón es ${ganadorFinal.name} con ${ganadorFinal.points} puntos.`);
+                    if(isHost) gameRef.update({ status: "finished" });
+                }
+
                 setTimeout(() => { 
-                    if(isHost) gameRef.update({ gameState: null, status: "waiting" }); 
-                }, 3000);
+                    if(isHost) {
+                        gameRef.child("gameState").update({ winner: null, rondaEnCurso: false });
+                    }
+                    
+                    gameScreen.classList.add("hidden");
+                    lobbyScreen.classList.remove("hidden");
+                    
+                    // Sincronizamos la lista de jugadores con los puntos grabados en Firebase
+                    gameRef.once("value", (snap) => {
+                        let d = snap.val();
+                        if(d && d.players) {
+                            players = d.players;
+                        }
+                        actualizarSala(); 
+                    });
+                }, 1000);
             }
 
             actualizarJuego();
