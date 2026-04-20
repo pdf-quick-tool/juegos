@@ -81,10 +81,10 @@
 
         .mesa-area {
             position: absolute;
-            top: 25%;
+            top: 18%; /* Subido de 25% para evitar solapamiento */
             left: -10%;
             right: -10%;
-            height: 45%;
+            height: 42%; /* Compactado de 45% */
             background: linear-gradient(180deg, rgba(62, 39, 35, 0.8) 0%, rgba(33, 21, 16, 0.9) 100%);
             border-radius: 50%;
             border: 4px solid #bcaaa4;
@@ -98,14 +98,15 @@
         .baza-row {
             display: flex;
             justify-content: center;
-            gap: 15px;
-            margin: 5px 0;
+            gap: 10px; /* Reducido de 15px */
+            margin: 2px 0; /* Reducido de 5px */
             z-index: 5;
         }
 
         .my-hand-container {
             position: absolute;
-            bottom: 80px;
+            bottom: 115px;
+            /* Subido de 80px para dar espacio a botones */
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -143,23 +144,22 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(0deg, #111 0%, rgba(17, 17, 17, 0.8) 100%);
-            padding: 10px;
+            background: linear-gradient(0deg, #111 0%, rgba(17, 17, 17, 0.9) 100%);
+            padding: 8px;
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 4px;
             z-index: 30;
         }
 
         .buttons-scroll {
             display: flex;
-            overflow-x: auto;
-            gap: 8px;
-            padding-bottom: 5px;
-        }
-
-        .buttons-scroll::-webkit-scrollbar {
-            display: none;
+            flex-wrap: nowrap;
+            /* Permitir envolver botones */
+            justify-content: center;
+            /* Centrar botones */
+            gap: 6px;
+            padding-bottom: 2px;
         }
 
         .btn-action {
@@ -215,7 +215,7 @@
         }
 
         .log {
-            background: rgba(0,0,0,0.85);
+            background: rgba(0, 0, 0, 0.85);
             position: absolute;
             top: 105px;
             left: 10px;
@@ -228,11 +228,11 @@
             z-index: 15;
             min-height: 40px;
             pointer-events: none;
-            border: 1px solid rgba(255,215,61,0.3);
+            border: 1px solid rgba(255, 215, 61, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
 
         .btn-play-card {
@@ -327,11 +327,15 @@
             display: flex;
             justify-content: space-between;
             padding: 10px 20px;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0, 0, 0, 0.3);
             border-radius: 10px;
             margin-bottom: 5px;
         }
-        .score-row-result.winner { border: 2px solid #f3b33d; background: rgba(243, 179, 61, 0.1); }
+
+        .score-row-result.winner {
+            border: 2px solid #f3b33d;
+            background: rgba(243, 179, 61, 0.1);
+        }
 
         .carta-mini {
             width: 30px;
@@ -348,15 +352,47 @@
             text-align: center;
         }
 
+        .baza-result {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #ffd966;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 3px 10px;
+            border-radius: 10px;
+            margin-top: 4px;
+            border: 1px solid rgba(255, 217, 102, 0.4);
+            display: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px; /* Espacio para la siguiente fila */
+        }
+
         @media (max-width: 500px) {
             .carta {
-                width: 75px;
-                height: 115px;
+                width: 70px;
+                height: 108px;
+            }
+
+            .my-hand-container {
+                bottom: 10%;
             }
 
             .btn-action {
-                padding: 10px 12px;
-                font-size: 0.8rem;
+                padding: 8px 10px;
+                font-size: 0.75rem;
+                border-width: 1.5px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .btn-action {
+                padding: 6px 8px;
+                font-size: 0.7rem;
+            }
+
+            .my-hand-container {
+                bottom: 10%;
+                /* Más espacio si hay mucho wrap */
             }
         }
     </style>
@@ -377,8 +413,11 @@
         <!-- Mesa -->
         <div class="mesa-area" id="mesaArea">
             <div class="baza-row" id="baza1"></div>
-            <div class="baza-row" id="baza2"></div>
-            <div class="baza-row" id="baza3"></div>
+            <div class="baza-result" id="resBaza1"></div>
+            <div class="baza-row" id="baza2" style="margin-top: 5px;"></div>
+            <div class="baza-result" id="resBaza2"></div>
+            <div class="baza-row" id="baza3" style="margin-top: 5px;"></div>
+            <div class="baza-result" id="resBaza3"></div>
         </div>
 
         <button id="btnJugarCarta" class="btn-play-card">⬆ Jugar Carta</button>
@@ -419,9 +458,11 @@
                 <!-- Puntos se llenan en JS -->
             </div>
             <div id="resultActions" style="display: flex; gap: 10px; justify-content: center;">
-                <button id="btnSiguienteMano" class="btn-action btn-verde" style="display: none;">Siguiente Mano</button>
+                <button id="btnSiguienteMano" class="btn-action btn-verde" style="display: none;">Siguiente
+                    Mano</button>
                 <button id="btnVolverLobby" class="btn-action btn-rojo" style="display: none;">Volver al Lobby</button>
-                <div id="waitMsg" style="color: #aaa; font-style: italic; display: none;">Esperando al anfitrión...</div>
+                <div id="waitMsg" style="color: #aaa; font-style: italic; display: none;">Esperando al anfitrión...
+                </div>
             </div>
         </div>
     </div>
@@ -492,6 +533,7 @@
         let myHand = [], currentTurn = null;
         let gameActive = false, selectedCard = null;
         let ultimoEstadoGalactico = null;
+        let ultimoCantoGritadoTime = 0; // Para evitar duplicar sonidos de voz
 
         // DOM
         const handDiv = document.getElementById("myHand");
@@ -707,17 +749,59 @@
             document.getElementById("baza2").innerHTML = baza2HTML;
             document.getElementById("baza3").innerHTML = baza3HTML;
 
+            // Mostrar Resultados de Bazas
+            let resultadosBazas = (ultimoEstado && ultimoEstado.ganadoresBazas) ? ultimoEstado.ganadoresBazas : [];
+            for (let i = 1; i <= 3; i++) {
+                let resDiv = document.getElementById("resBaza" + i);
+                if (resultadosBazas[i - 1]) {
+                    let gId = resultadosBazas[i - 1];
+                    let texto = "";
+                    if (gId === "empate") texto = "🤝 PARDA";
+                    else if (gId === myId) texto = "⭐ GANASTE";
+                    else texto = "🚩 GANA RIVAL";
+                    
+                    resDiv.innerHTML = texto;
+                    resDiv.style.display = "block";
+                } else {
+                    resDiv.style.display = "none";
+                }
+            }
+
             const showRespuestas = (cp && cp.bloqueado === myId);
             document.getElementById("respuestasRow").style.display = showRespuestas ? "flex" : "none";
 
+            // Botones de Envido: Visibles si no se jugó carta y no hay envido saldado
+            // El Envido lo puede cantar CUALQUIERA al inicio (Regla de interrupción)
+            let puedeRevirarEnvido = false;
+            if (cp && cp.bloqueado === myId && cp.tipo.includes("envido")) {
+                if (!cp.tipo.includes("falta")) puedeRevirarEnvido = true;
+            }
+
             const yaSeJugoCarta = mesaC.length > 0;
             const envidoSaldado = (ultimoEstado && ultimoEstado.envidoFinalizado);
-            document.getElementById("cantosEnvidoRow").style.display = (!yaSeJugoCarta && !cp && !envidoSaldado) ? "flex" : "none";
+            
+            // Permitimos ver botones de envido si nadie jugó carta, sin importar el turno
+            document.getElementById("cantosEnvidoRow").style.display = (!yaSeJugoCarta && !envidoSaldado && (!cp || puedeRevirarEnvido)) ? "flex" : "none";
+            
+            if (cp && cp.tipo.includes("envido")) {
+                document.getElementById("btnEnvido").style.display = "none";
+                if (cp.tipo.includes("real")) document.getElementById("btnRealEnvido").style.display = "none";
+            } else {
+                document.getElementById("btnEnvido").style.display = "block";
+                document.getElementById("btnRealEnvido").style.display = "block";
+            }
 
-            btnTruco.style.display = (nivel === 0 && !cp) ? "block" : "none";
-            btnRetruco.style.display = (nivel === 1 && duenio !== myId && !cp) ? "block" : "none";
-            btnVale4.style.display = (nivel === 2 && duenio !== myId && !cp) ? "block" : "none";
-            document.getElementById("cantosTrucoRow").style.display = (!cp && nivel < 3) ? "flex" : "none";
+            // Botones de Truco: Visibles si no es el nivel máximo
+            let puedeRevirarTruco = false;
+            if (cp && cp.bloqueado === myId && ["truco", "retruco"].includes(cp.tipo)) {
+                if (cp.tipo === "truco" || cp.tipo === "retruco") puedeRevirarTruco = true;
+            }
+
+            btnTruco.style.display = (nivel === 0 && !cp && currentTurn === myId) ? "block" : "none";
+            btnRetruco.style.display = ((nivel === 1 && duenio !== myId && !cp && currentTurn === myId) || (cp && cp.tipo === "truco" && cp.bloqueado === myId)) ? "block" : "none";
+            btnVale4.style.display = ((nivel === 2 && duenio !== myId && !cp && currentTurn === myId) || (cp && cp.tipo === "retruco" && cp.bloqueado === myId)) ? "block" : "none";
+            
+            document.getElementById("cantosTrucoRow").style.display = ((!cp && nivel < 3 && currentTurn === myId) || puedeRevirarTruco) ? "flex" : "none";
 
             btnJugarCarta.style.display = (selectedCard !== null && currentTurn === myId && !cp) ? "block" : "none";
 
@@ -832,11 +916,11 @@
             // Sincronizar puntos finales en la lista de jugadores de la raíz
             let ptsReal = ultimoEstado.points || {};
             let actualizaciones = { status: "finished" }; // finished o waiting para volver al lobby
-            
+
             players.forEach((p, index) => {
                 actualizaciones[`players/${index}/points`] = ptsReal[p.id] || 0;
             });
-            
+
             // También borramos el gameState para que index.html vea que ya se puede resetear
             actualizaciones["gameState"] = null;
             gameRef.update(actualizaciones);
@@ -853,30 +937,77 @@
 
         // ==================== CANTOS Y RESPUESTAS ====================
         function realizarCanto(tipo) {
-            if (!gameActive || (ultimoEstado.cantoPendiente && ultimoEstado.cantoPendiente.bloqueado === myId)) return;
+            let cp = ultimoEstado.cantoPendiente;
             let mesaC = ultimoEstado?.mesa || [];
             let nivel = ultimoEstado?.nivelTruco || 0;
             let duenio = ultimoEstado?.idDuenioTruco;
 
-            if (tipo === "truco" && nivel > 0) { alert("Ya se cantó Truco"); return; }
-            if (tipo === "retruco" && nivel !== 1) { alert("Solo se puede retrucar después de Truco"); return; }
-            if (tipo === "vale 4" && nivel !== 2) { alert("Solo se puede Vale Cuatro después de Retruco"); return; }
-            if ((tipo === "retruco" || tipo === "vale 4") && duenio === myId) {
+            if (!gameActive) return;
+            
+            // Un canto de Truco solo se puede hacer en el turno propio
+            // Pero el Envido lo puede cantar cualquiera al inicio de la mano
+            let esEnvidoInicial = tipo.includes("envido") && mesaC.length === 0;
+
+            if (!cp && currentTurn !== myId && !esEnvidoInicial) {
+                alert("No es tu turno de cantar."); 
+                return;
+            }
+            
+            if (cp && cp.bloqueado !== myId) return; 
+
+            // Validaciones de Truco/Retruco/Vale 4
+            if (tipo === "truco" && (nivel > 0 || (cp && cp.tipo === "truco"))) { alert("Ya se cantó Truco"); return; }
+            if (tipo === "retruco" && (nivel !== 1 && (!cp || cp.tipo !== "truco"))) { alert("Solo se puede retrucar después de Truco"); return; }
+            if (tipo === "vale 4" && (nivel !== 2 && (!cp || cp.tipo !== "retruco"))) { alert("Solo se puede Vale Cuatro después de Retruco"); return; }
+            
+            if ((tipo === "retruco" || tipo === "vale 4") && duenio === myId && !cp) {
                 alert("No puedes subir la apuesta si tienes el 'Quiero'");
                 return;
             }
+
             if (tipo.includes("envido") && (ultimoEstado.envidoFinalizado || mesaC.length > 0)) {
                 alert("No se puede cantar envido ahora");
                 return;
             }
 
             let bloqueado = otherPlayers[0].id;
+            let time = Date.now();
+            let ptsQuiero = 0, ptsNoQuiero = 1;
+            let nuevoTipo = tipo;
+
+            // Lógica de REVIRE de Envido
+            if (tipo.includes("envido") && cp && cp.tipo.includes("envido")) {
+                ptsNoQuiero = cp.ptsQuiero || 1;
+                if (tipo === "falta envido") {
+                    // Si juegan a 30 y están en las malas, el Falta Envido suele dar el partido (o 15/20 pts)
+                    // Por ahora lo dejamos en 15 como "muerte súbita" de la mitad, 
+                    // o podrías poner 30 para ganar directo.
+                    ptsQuiero = 15; 
+                } else {
+                    let valorActual = (tipo === "envido") ? 2 : 3;
+                    ptsQuiero = (cp.ptsQuiero || 0) + valorActual;
+                }
+                nuevoTipo = cp.tipo + ", " + tipo;
+            } else if (tipo.includes("envido")) {
+                ptsQuiero = (tipo === "envido") ? 2 : (tipo === "real envido" ? 3 : 15);
+                ptsNoQuiero = 1;
+            }
+
             let actualizaciones = {
-                "gameState/cantoPendiente": { tipo, iniciador: myId, bloqueado, time: Date.now() },
-                "gameState/lastLog": { msg: `🔊 <b>${myName || 'Jugador'}</b> cantó ${tipo.toUpperCase()}`, time: Date.now() }
+                "gameState/cantoPendiente": { 
+                    tipo: nuevoTipo, 
+                    iniciador: myId, 
+                    bloqueado, 
+                    time: time,
+                    ptsQuiero: ptsQuiero,
+                    ptsNoQuiero: ptsNoQuiero
+                },
+                "gameState/lastLog": { msg: `📣 <b>${myName} dice:</b> "¡${tipo.toUpperCase()}!"`, time: time }
             };
-            gameRef.update(actualizaciones);
+            
+            ultimoCantoGritadoTime = time;
             hablar(tipo);
+            gameRef.update(actualizaciones);
         }
 
         function procesarRespuestaCanto(quiere) {
@@ -893,16 +1024,23 @@
                     let misPuntos = calcularPuntosEnvido(myHand);
                     let oponenteMano = ultimoEstado.hands?.[cp.iniciador] || [];
                     let susPuntos = calcularPuntosEnvido(oponenteMano);
-                    let puntosEnJuego = cp.tipo === "envido" ? 2 : (cp.tipo === "real envido" ? 3 : 15);
+                    let puntosEnJuego = cp.ptsQuiero || (cp.tipo === "envido" ? 2 : (cp.tipo === "real envido" ? 3 : 15));
                     let ganadorEnvido = (misPuntos > susPuntos) ? myId : cp.iniciador;
+                    let perdedorEnvido = (ganadorEnvido === myId) ? cp.iniciador : myId;
+                    
                     let nomG = (ganadorEnvido === myId) ? "Tú" : (players.find(p => p.id === ganadorEnvido)?.name || "Oponente");
-                    let msg = `✅ ¡QUIERO!<br>📣 Tú: ${misPuntos}, Rival: ${susPuntos}.<br>🏆 ${nomG} gana +${puntosEnJuego}`;
+                    let nomP = (perdedorEnvido === myId) ? "Tú" : (players.find(p => p.id === perdedorEnvido)?.name || "Oponente");
+                    let msgB = (Math.abs(misPuntos - susPuntos) > 5) ? `${nomP}: "Son buenas".` : `📣 Se mostraron los puntos.`;
+                    
+                    let msg = `✅ <b>${myName} dice:</b> "¡QUIERO!"<br>${msgB}<br>🏆 ${nomG}: ${ganadorEnvido === myId ? misPuntos : susPuntos}, ${nomP}: ${perdedorEnvido === myId ? misPuntos : susPuntos}<br>✨ ${nomG} gana +${puntosEnJuego} pts.`;
                     actualizaciones[`gameState/points/${ganadorEnvido}`] = (ptsActuales[ganadorEnvido] || 0) + puntosEnJuego;
                     actualizaciones["gameState/lastLog"] = { msg, time: Date.now() };
                 } else {
-                    let ptsIniciador = (ptsActuales[cp.iniciador] || 0) + 1;
+                    let puntosRegalados = cp.ptsNoQuiero || 1;
+                    let ptsIniciador = (ptsActuales[cp.iniciador] || 0) + puntosRegalados;
+                    let nomIniciador = players.find(p => p.id === cp.iniciador)?.name || "Rival";
                     actualizaciones[`gameState/points/${cp.iniciador}`] = ptsIniciador;
-                    actualizaciones["gameState/lastLog"] = { msg: `❌ No quiso envido. +1 para ${players.find(p => p.id === cp.iniciador)?.name}`, time: Date.now() };
+                    actualizaciones["gameState/lastLog"] = { msg: `🚩 <b>${myName} dice:</b> "No quiero".<br>💰 ${nomIniciador} suma +${puntosRegalados} pts por el envive.`, time: Date.now() };
                 }
             }
             else if (["truco", "retruco", "vale 4"].includes(cp.tipo)) {
@@ -912,13 +1050,14 @@
                     actualizaciones["gameState/nivelTruco"] = nuevoNivel;
                     actualizaciones["gameState/valorMano"] = nuevoValor;
                     actualizaciones["gameState/idDuenioTruco"] = myId;
-                    actualizaciones["gameState/lastLog"] = { msg: `🤝 <b>${myName}</b> dijo ¡QUIERO! Mano vale ${nuevoValor} pts.`, time: Date.now() };
+                    actualizaciones["gameState/lastLog"] = { msg: `🤝 <b>${myName} dice:</b> "¡QUIERO!"<br>🔥 La mano ahora vale ${nuevoValor} pts.`, time: Date.now() };
                 } else {
                     let puntosRegalados = cp.tipo === "truco" ? 1 : (cp.tipo === "retruco" ? 2 : 3);
                     let ptsIniciador = (ptsActuales[cp.iniciador] || 0) + puntosRegalados;
+                    let nomIniciador = players.find(p => p.id === cp.iniciador)?.name || "Rival";
                     actualizaciones[`gameState/points/${cp.iniciador}`] = ptsIniciador;
                     actualizaciones["gameState/rondaEnCurso"] = false;
-                    actualizaciones["gameState/lastLog"] = { msg: `🏳️ <b>${myName}</b> NO QUIERO. +${puntosRegalados} pts para ${players.find(p => p.id === cp.iniciador)?.name}`, time: Date.now() };
+                    actualizaciones["gameState/lastLog"] = { msg: `🚩 <b>${myName} dice:</b> "No quiero".<br>🏆 ${nomIniciador} gana +${puntosRegalados} pts por el truco.`, time: Date.now() };
                 }
             }
             gameRef.update(actualizaciones);
@@ -980,10 +1119,10 @@
                 actualizaciones[`gameState/winner`] = ganadorMano;
                 actualizaciones[`gameState/currentTurn`] = null;
                 let nomG = players.find(p => p.id === ganadorMano)?.name || "Alguien";
-                actualizaciones[`gameState/lastLog`] = { msg: `${ganadorBazaMsg}<br>🔥 <b>¡${nomG} gana la mano! (+${valorMano} pts)</b>`, time: Date.now() };
+                actualizaciones[`gameState/lastLog`] = { msg: `<b>${nomG} dice:</b> "¡Gané la mano!". Recibe +${valorMano} pts.<br>${ganadorBazaMsg}`, time: Date.now() };
             } else {
                 actualizaciones[`gameState/currentTurn`] = next;
-                actualizaciones[`gameState/lastLog`] = { msg: `<b>${myName}</b> jugó carta. ${ganadorBazaMsg}`, time: Date.now() };
+                actualizaciones[`gameState/lastLog`] = { msg: `🃏 <b>${myName}</b> tiró una carta al tapete.<br>${ganadorBazaMsg}`, time: Date.now() };
             }
 
             selectedCard = null;
@@ -1001,8 +1140,16 @@
                 id: p.id, name: p.name, points: estado.points?.[p.id] || 0
             }));
 
-            if (estado.cantoPendiente && (!ultimoEstadoGalactico || !ultimoEstadoGalactico.cantoPendiente || ultimoEstadoGalactico.cantoPendiente.time !== estado.cantoPendiente.time)) {
-                hablar(estado.cantoPendiente.tipo);
+            if (estado.cantoPendiente && estado.cantoPendiente.iniciador !== myId) {
+                if (estado.cantoPendiente.time > ultimoCantoGritadoTime) {
+                    ultimoCantoGritadoTime = estado.cantoPendiente.time;
+                    hablar(estado.cantoPendiente.tipo);
+                }
+            }
+
+            if (estado.lastLog && estado.lastLog.msg) {
+                logDiv.innerHTML = estado.lastLog.msg;
+                // Scroll al fondo si el log fuera muy largo, aunque aquí es una sola línea
             }
 
             actualizarJuego();
@@ -1018,10 +1165,11 @@
         btnVale4.onclick = () => realizarCanto("vale 4");
         btnQuiero.onclick = () => procesarRespuestaCanto(true);
         btnNoQuiero.onclick = () => procesarRespuestaCanto(false);
-        btnMazo.onclick = () => {
+            btnMazo.onclick = () => {
             if (confirm("¿Seguro que querés irte al mazo? Regalarás la mano.")) {
                 hablar("¡Me voy al mazo!");
                 let rivalId = otherPlayers[0].id;
+                let rivalNom = otherPlayers[0].name || "Rival";
                 let valorMano = ultimoEstado?.valorMano || 1;
                 let ptsActuales = ultimoEstado?.points || {};
                 let nuevosPts = { ...ptsActuales, [rivalId]: (ptsActuales[rivalId] || 0) + valorMano };
@@ -1029,7 +1177,7 @@
                     "gameState/points": nuevosPts,
                     "gameState/rondaEnCurso": false,
                     "gameState/cantoPendiente": null,
-                    "gameState/lastLog": { msg: `🏳️ <b>${myName}</b> se fue al mazo.`, time: Date.now() }
+                    "gameState/lastLog": { msg: `🏳️ <b>${myName} dice:</b> "¡Al mazo!".<br>🏆 ${rivalNom} gana +${valorMano} pts de la mano.`, time: Date.now() }
                 });
             }
         };
@@ -1037,14 +1185,14 @@
         document.getElementById("quitGameBtn").onclick = () => {
             if (confirm("¿Estás seguro de que querés salir?")) {
                 if (isHost && gameRef) {
-                    gameRef.remove(); 
+                    gameRef.remove();
                 } else if (gameRef && myId) {
                     // Eliminarme y avisar
                     let nuevosPlayers = players.filter(p => p.id !== myId);
                     let logMsg = { msg: `🚨 <b>${myName || 'Un jugador'}</b> ha salido de la partida.`, time: Date.now() };
-                    gameRef.update({ 
+                    gameRef.update({
                         players: nuevosPlayers,
-                        "gameState/lastLog": logMsg 
+                        "gameState/lastLog": logMsg
                     });
                 }
                 localStorage.removeItem("chinchon_roomId");
@@ -1071,10 +1219,10 @@
                             if (data && data.status === "playing" && data.gameState) {
                                 players = data.players || [];
                                 iniciarJuego(data.gameState);
-                            } else { 
+                            } else {
                                 // Si no hay data es porque el host borró la sala
                                 if (!data) alert("El anfitrión ha cerrado la sala.");
-                                window.location.href = "index.html"; 
+                                window.location.href = "index.html";
                             }
                         });
                     } else { window.location.href = "index.html"; }
