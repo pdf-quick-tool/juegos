@@ -28,13 +28,16 @@
             width: 100%;
             max-width: 500px;
             height: 100%;
-            max-height: 1000px; /* Evita estiramiento excesivo en pantallas muy largas */
+            height: 100dvh;
+            max-height: 900px; /* Evita que sea infinitamente alto en pantallas raras */
+            aspect-ratio: 9/16; /* Mantiene una proporción lógica */
             position: relative;
             background: radial-gradient(ellipse at center, #8d6e63 0%, #4e342e 60%, #211510 100%);
             display: flex;
             flex-direction: column;
             overflow: hidden;
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            margin: auto; /* Centra en modo escritorio */
         }
 
         .top-bar {
@@ -109,7 +112,7 @@
 
         .my-hand-container {
             position: absolute;
-            bottom: 140px; /* Subido más para asegurar que no se solape con botones */
+            bottom: 180px; /* Subido más para dar aire a los botones que envuelven */
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -117,7 +120,7 @@
             align-items: flex-end;
             z-index: 20;
             width: 100%;
-            pointer-events: none; /* Permite clicks en lo que hay detrás si no es una carta */
+            pointer-events: none;
         }
 
         .my-hand-container .carta {
@@ -154,21 +157,22 @@
             left: 0;
             right: 0;
             background: linear-gradient(0deg, #111 0%, rgba(17, 17, 17, 0.9) 100%);
-            padding: 10px 5px;
+            /* Margen de seguridad para móviles (Safe Area) */
+            padding: 10px 5px calc(15px + env(safe-area-inset-bottom, 15px));
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             z-index: 40;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 2px solid rgba(255,255,255,0.1);
         }
 
         .buttons-scroll {
             display: flex;
-            flex-wrap: wrap; /* Cambiado a wrap para que entren todos en móviles */
+            flex-wrap: wrap; 
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
             padding: 2px;
-            max-height: 150px;
+            max-height: 160px;
             overflow-y: auto;
         }
 
@@ -378,19 +382,22 @@
         }
 
         @media (max-width: 500px) {
+            .container {
+                aspect-ratio: auto; /* En móviles reales usamos todo el alto disponible */
+                height: 100dvh;
+            }
             .carta {
-                width: 75px; /* Un poco más grande para que se vea mejor */
+                width: 75px;
                 height: 115px;
             }
 
             .my-hand-container {
-                bottom: 160px; /* Ajustado para pantallas de móvil */
+                bottom: 200px;
             }
 
             .btn-action {
-                padding: 10px 12px;
-                font-size: 0.8rem;
-                border-width: 2px;
+                padding: 10px 14px;
+                font-size: 0.85rem;
             }
         }
 
