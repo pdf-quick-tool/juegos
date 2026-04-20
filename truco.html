@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Truco Argentino - Motor de Reglas Mejorado</title>
     <style>
         /* ===== ESTILOS ORIGINALES CONSERVADOS ===== */
@@ -17,20 +17,24 @@
             font-family: 'Poppins', system-ui, sans-serif;
             margin: 0;
             height: 100vh;
+            height: 100dvh;
             overflow: hidden;
             display: flex;
             justify-content: center;
+            align-items: center;
         }
 
         .container {
             width: 100%;
             max-width: 500px;
             height: 100%;
+            max-height: 1000px; /* Evita estiramiento excesivo en pantallas muy largas */
             position: relative;
             background: radial-gradient(ellipse at center, #8d6e63 0%, #4e342e 60%, #211510 100%);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
 
         .top-bar {
@@ -81,10 +85,10 @@
 
         .mesa-area {
             position: absolute;
-            top: 18%; /* Subido de 25% para evitar solapamiento */
+            top: 15%; 
             left: -10%;
             right: -10%;
-            height: 42%; /* Compactado de 45% */
+            height: 40%; 
             background: linear-gradient(180deg, rgba(62, 39, 35, 0.8) 0%, rgba(33, 21, 16, 0.9) 100%);
             border-radius: 50%;
             border: 4px solid #bcaaa4;
@@ -105,14 +109,19 @@
 
         .my-hand-container {
             position: absolute;
-            bottom: 115px;
-            /* Subido de 80px para dar espacio a botones */
+            bottom: 140px; /* Subido más para asegurar que no se solape con botones */
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             justify-content: center;
             align-items: flex-end;
             z-index: 20;
+            width: 100%;
+            pointer-events: none; /* Permite clicks en lo que hay detrás si no es una carta */
+        }
+
+        .my-hand-container .carta {
+            pointer-events: auto;
         }
 
         .carta {
@@ -145,21 +154,22 @@
             left: 0;
             right: 0;
             background: linear-gradient(0deg, #111 0%, rgba(17, 17, 17, 0.9) 100%);
-            padding: 8px;
+            padding: 10px 5px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            z-index: 30;
+            gap: 8px;
+            z-index: 40;
+            border-top: 1px solid rgba(255,255,255,0.1);
         }
 
         .buttons-scroll {
             display: flex;
-            flex-wrap: nowrap;
-            /* Permitir envolver botones */
+            flex-wrap: wrap; /* Cambiado a wrap para que entren todos en móviles */
             justify-content: center;
-            /* Centrar botones */
-            gap: 6px;
-            padding-bottom: 2px;
+            gap: 8px;
+            padding: 2px;
+            max-height: 150px;
+            overflow-y: auto;
         }
 
         .btn-action {
@@ -369,30 +379,45 @@
 
         @media (max-width: 500px) {
             .carta {
-                width: 70px;
-                height: 108px;
+                width: 75px; /* Un poco más grande para que se vea mejor */
+                height: 115px;
             }
 
             .my-hand-container {
-                bottom: 10%;
+                bottom: 160px; /* Ajustado para pantallas de móvil */
+            }
+
+            .btn-action {
+                padding: 10px 12px;
+                font-size: 0.8rem;
+                border-width: 2px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .carta {
+                width: 65px;
+                height: 100px;
+            }
+            
+            .my-hand-container {
+                bottom: 150px;
             }
 
             .btn-action {
                 padding: 8px 10px;
                 font-size: 0.75rem;
-                border-width: 1.5px;
             }
         }
 
-        @media (max-width: 360px) {
-            .btn-action {
-                padding: 6px 8px;
-                font-size: 0.7rem;
+        @media (max-height: 600px) {
+            /* Pantallas muy petisas o modo landscape */
+            .mesa-area {
+                height: 35%;
+                top: 12%;
             }
-
             .my-hand-container {
-                bottom: 10%;
-                /* Más espacio si hay mucho wrap */
+                bottom: 130px;
             }
         }
     </style>
